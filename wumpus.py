@@ -2,10 +2,10 @@ import pygame
 import random
 
 # Constants
-WIDTH, HEIGHT = 600, 600
-GRID_SIZE = 10
+WIDTH, HEIGHT = 1000, 600
+GRID_SIZE = 15
 CELL_SIZE = WIDTH // GRID_SIZE
-WHITE = (255, 255, 255)
+WHITE = pygame.image.load("Assets/tile1.jpg")
 BLACK = (0, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
@@ -57,3 +57,19 @@ while running:
     pygame.display.flip()
 
 pygame.quit()
+
+
+
+#LIST OF NEEDS FOR THE GAME
+    #Assets
+        # Main Floor
+        # Wumpus Floor
+        # Wumpus image
+        # Gold image
+        # Pit image
+        # Player image
+    #
+    #
+    #
+    #
+    #
