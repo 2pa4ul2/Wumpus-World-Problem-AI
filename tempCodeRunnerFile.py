@@ -1,0 +1,1 @@
+self.movement[2] * self.speed

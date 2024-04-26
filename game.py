@@ -1,37 +1,93 @@
 import sys
 import pygame 
 
-HEIGHT = 600
-WIDTH = 800
+SCREEN_HEIGHT = 900
+SCREEN_WIDTH = 1000
+
+BOARD_HEIGHT = 600
+BOARD_WIDTH = 800
 
 
 class Game:
     def __init__(self):
         pygame.init()
 
-        self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
-
+        self.screen = pygame.display.set_mode((BOARD_WIDTH, BOARD_HEIGHT))
         self.clock = pygame.time.Clock()
 
-        self.img = pygame.image.load("Assets/tile1.jpg") #TILES BACKGROUND
-        self.img = pygame.transform.scale(self.img, (50, 50))
+        self.tile = pygame.image.load("Assets/tile1.jpg") #TILES BACKGROUND
+        self.speed = 10
+
+       # self.front = pygame.image.load("assets/character1-01.png") #CHARACTER
+       # self.back = pygame.image.load("assets/character1-02.png") #CHARACTER
+       # self.left = pygame.image.load("assets/character1-03.png") #CHARACTER
+       # self.right = pygame.image.load("assets/character1-04.png") #CHARACTER
+        
+        self.front = pygame.image.load("assets/CH2-01.png") #CHARACTER
+        self.back = pygame.image.load("assets/CH2-02.png") #CHARACTER
+        self.left = pygame.image.load("assets/CH2-03.png") #CHARACTER
+        self.right = pygame.image.load("assets/CH2-04.png") #CHARACTER
+
+        self.tile = pygame.transform.scale(self.tile, (100, 100))
+        self.front = pygame.transform.scale(self.front, (100, 100))
+        self.back = pygame.transform.scale(self.back, (100, 100))
+        self.left = pygame.transform.scale(self.left, (100, 100))
+        self.right = pygame.transform.scale(self.right, (100, 100))
+        
+        self.movement = [False, False, False, False] #UP, DOWN, LEFT, RIGHT
+        self.img_pos = [0, 0]
 
 
     def run(self):
-        while True:
+        while True:                      # Get the size of the image
+            img_width, img_height = self.tile.get_size()
+            
+            for i in range(0, BOARD_WIDTH, img_width):
+                for j in range(0, BOARD_HEIGHT, img_height):
+                    self.screen.blit(self.tile, (i, j)) 
+
+            self.img_pos[1] += (self.movement[1] - self.movement[0]) * self.speed
+            self.img_pos[0] += (self.movement[3] - self.movement[2]) * self.speed
+            
+            
+            if self.movement[0]:  # Up
+                self.screen.blit(self.back, self.img_pos)
+            elif self.movement[1]:  # Down
+                self.screen.blit(self.front, self.img_pos)
+            elif self.movement[2]:  # Left
+                self.screen.blit(self.left, self.img_pos)
+            elif self.movement[3]:  # Right
+                self.screen.blit(self.right, self.img_pos)
+            else:  # No movement
+                self.screen.blit(self.front, self.img_pos)
+
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
-
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_UP:
+                        self.movement[0] = True  
+                    if event.key == pygame.K_DOWN:
+                        self.movement[1] = True  
+                    if event.key == pygame.K_LEFT:
+                        self.movement[2] = True  
+                    if event.key == pygame.K_RIGHT:
+                        self.movement[3] = True  
+                if event.type == pygame.KEYUP:
+                    if event.key == pygame.K_UP:
+                        self.movement[0] = False  
+                    if event.key == pygame.K_DOWN:
+                        self.movement[1] = False
+                    if event.key == pygame.K_LEFT:
+                        self.movement[2] = False  
+                    if event.key == pygame.K_RIGHT:
+                        self.movement[3] = False  
+            
+            pygame.display.flip()
             pygame.display.update()
             self.clock.tick(60)
-
-            for i in range(0, HEIGHT, WIDTH):
-                for j in range(0, HEIGHT, HEIGHT):
-                    self.screen.blit(self.img, (i, j))   
-
-            pygame.display.flip()
 
 
 Game().run()
