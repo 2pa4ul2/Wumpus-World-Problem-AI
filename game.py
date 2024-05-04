@@ -2,10 +2,10 @@ import sys
 import pygame 
 
 SCREEN_HEIGHT = 900
-SCREEN_WIDTH = 1000
+SCREEN_WIDTH = 1500
 
 BOARD_HEIGHT = 600
-BOARD_WIDTH = 800
+BOARD_WIDTH = 1200
 
 
 class Game:
@@ -28,14 +28,18 @@ class Game:
         self.left = pygame.image.load("assets/CH2-03.png") #CHARACTER
         self.right = pygame.image.load("assets/CH2-04.png") #CHARACTER
 
-        self.tile = pygame.transform.scale(self.tile, (100, 100))
-        self.front = pygame.transform.scale(self.front, (100, 100))
-        self.back = pygame.transform.scale(self.back, (100, 100))
-        self.left = pygame.transform.scale(self.left, (100, 100))
-        self.right = pygame.transform.scale(self.right, (100, 100))
+
+        self.tile_width = BOARD_WIDTH // 15
+        self.tile_height = BOARD_HEIGHT // 8
+        self.tile = pygame.transform.scale(self.tile, (self.tile_width, self.tile_height))
+        self.front = pygame.transform.scale(self.front, (70, 70))
+        self.back = pygame.transform.scale(self.back, (70, 70))
+        self.left = pygame.transform.scale(self.left, (70, 70))
+        self.right = pygame.transform.scale(self.right, (70, 70))
         
         self.movement = [False, False, False, False] #UP, DOWN, LEFT, RIGHT
         self.img_pos = [0, 0]
+
 
 
     def run(self):
@@ -91,3 +95,21 @@ class Game:
 
 
 Game().run()
+
+
+
+
+#WUMPUS RULES
+#stench = wumpus nearby
+#breeze = pit nearby
+#glitter = gold nearby
+
+#CONTROLS FOR SELF
+#UP, DOWN, LEFT, RIGHT
+#KILL = X
+#GET GOLD = Z
+#
+#
+#
+#
+#
