@@ -13,16 +13,16 @@ board_values = [[0 for _ in range(BOARD_WIDTH)] for _ in range(BOARD_HEIGHT)]
 
 # Function to spawn the character at a specific coordinate
 def spawn_character(screen, x, y):
-    screen.blit(CHARACTER_IMG, (x * CELL_SIZE, y * CELL_SIZE))
+    screen.blit(char_d, (x * CELL_SIZE, y * CELL_SIZE))
 
 def spawn_gold(screen, x, y):
-    screen.blit(GOLD_IMG, (x * CELL_SIZE, y * CELL_SIZE))
+    screen.blit(gold_img, (x * CELL_SIZE, y * CELL_SIZE))
 
 def spawn_wumpus(screen, x, y):
-    screen.blit(WUMPUS_IMG, (x * CELL_SIZE, y * CELL_SIZE))
+    screen.blit(wumpus_img, (x * CELL_SIZE, y * CELL_SIZE))
 
 def spawn_pit(screen, x, y):
-    screen.blit(PIT_IMG, (x * CELL_SIZE, y * CELL_SIZE))
+    screen.blit(pit_img, (x * CELL_SIZE, y * CELL_SIZE))
 
 # Function to generate random coordinates for gold
 def generate_gold_positions(num_golds):
@@ -61,7 +61,7 @@ def draw_board(screen):
     screen.fill(WHITE)
     for y in range(BOARD_HEIGHT):
         for x in range(BOARD_WIDTH):
-            screen.blit(TILE_IMG, (x * CELL_SIZE, y * CELL_SIZE)) #print image on tiles
+            screen.blit(tile_img, (x * CELL_SIZE, y * CELL_SIZE)) #print image on tiles
             pygame.draw.rect(screen, BLACK, (x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE), 1) #Draw borders
 
 # Function to update the board values

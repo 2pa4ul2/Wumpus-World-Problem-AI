@@ -11,17 +11,28 @@ WIDTH, HEIGHT = 960, 640
 CELL_SIZE = 80
 BOARD_WIDTH, BOARD_HEIGHT = 5, 5
 
-TILE_IMG = pygame.image.load("assets/tile3.jpg")
-TILE_IMG = pygame.transform.scale(TILE_IMG, (CELL_SIZE, CELL_SIZE))
+tile_img = pygame.image.load("assets/tile3.jpg")
+tile_img = pygame.transform.scale(tile_img, (CELL_SIZE, CELL_SIZE))
 
-CHARACTER_IMG = pygame.image.load("assets/character1-01.png")
-CHARACTER_IMG = pygame.transform.scale(CHARACTER_IMG, (CELL_SIZE, CELL_SIZE))
+char_d = pygame.image.load("assets/character1-01.png")
+char_d = pygame.transform.scale(char_d, (CELL_SIZE, CELL_SIZE))
 
-GOLD_IMG = pygame.image.load("assets/gold.png")
-GOLD_IMG = pygame.transform.scale(GOLD_IMG, (CELL_SIZE, CELL_SIZE))
+char_up = pygame.image.load("assets/character1-02.png")
+char_up = pygame.transform.scale(char_up, (CELL_SIZE, CELL_SIZE))
 
-WUMPUS_IMG = pygame.image.load("assets/wumpus1.png")
-WUMPUS_IMG = pygame.transform.scale(WUMPUS_IMG, (CELL_SIZE, CELL_SIZE))
+char_l = pygame.image.load("assets/character1-03.png")
+char_l = pygame.transform.scale(char_l, (CELL_SIZE, CELL_SIZE))
 
-PIT_IMG = pygame.image.load("assets/hole.png")
-PIT_IMG = pygame.transform.scale(PIT_IMG, (CELL_SIZE, CELL_SIZE))
+char_r = pygame.image.load("assets/character1-04.png")
+char_r = pygame.transform.scale(char_r, (CELL_SIZE, CELL_SIZE))
+
+
+
+gold_img = pygame.image.load("assets/gold.png")
+gold_img = pygame.transform.scale(gold_img, (CELL_SIZE, CELL_SIZE))
+
+wumpus_img = pygame.image.load("assets/wumpus1.png")
+wumpus_img = pygame.transform.scale(wumpus_img, (CELL_SIZE, CELL_SIZE))
+
+pit_img = pygame.image.load("assets/hole.png")
+pit_img = pygame.transform.scale(pit_img, (CELL_SIZE, CELL_SIZE))

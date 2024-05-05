@@ -86,7 +86,7 @@ class WumpusGame:
         self.screen.fill(WHITE)
         for y in range(BOARD_HEIGHT):
             for x in range(BOARD_WIDTH):
-                self.screen.blit(TILE_IMG, (x * CELL_SIZE, y * CELL_SIZE))
+                self.screen.blit(tile_img, (x * CELL_SIZE, y * CELL_SIZE))
                 pygame.draw.rect(self.screen, BLACK, (x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE), 1)
         for pos in self.wumpus_positions:
             for adj in self.get_adjacent_cells(*pos):
@@ -104,16 +104,16 @@ class WumpusGame:
         print(self.board_values)
 
     def spawn_gold(self, x, y):
-        self.screen.blit(GOLD_IMG, (x * CELL_SIZE, y * CELL_SIZE))
+        self.screen.blit(gold_img, (x * CELL_SIZE, y * CELL_SIZE))
 
     def spawn_wumpus(self, x, y):
-        self.screen.blit(WUMPUS_IMG, (x * CELL_SIZE, y * CELL_SIZE))
+        self.screen.blit(wumpus_img, (x * CELL_SIZE, y * CELL_SIZE))
 
     def spawn_pit(self, x, y):
-        self.screen.blit(PIT_IMG, (x * CELL_SIZE, y * CELL_SIZE))
+        self.screen.blit(pit_img, (x * CELL_SIZE, y * CELL_SIZE))
 
     def spawn_character(self):
-        self.screen.blit(CHARACTER_IMG, (self.char_pos[0] * CELL_SIZE, self.char_pos[1] * CELL_SIZE))
+        self.screen.blit(char_d, (self.char_pos[0] * CELL_SIZE, self.char_pos[1] * CELL_SIZE))
 
     def print_score(self):
         FONT = pygame.font.Font(None, 24)  
