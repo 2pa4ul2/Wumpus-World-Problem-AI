@@ -36,3 +36,4 @@ wumpus_img = pygame.transform.scale(wumpus_img, (CELL_SIZE, CELL_SIZE))
 
 pit_img = pygame.image.load("assets/hole.png")
 pit_img = pygame.transform.scale(pit_img, (CELL_SIZE, CELL_SIZE))
+

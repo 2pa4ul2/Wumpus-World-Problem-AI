@@ -16,30 +16,14 @@ class WumpusGame:
         self.gold_positions = self.generate_gold_positions(4)
         self.wumpus_positions = self.generate_wumpus_positions(3, self.gold_positions)
         self.pit_positions = self.generate_pit_positions(3, self.gold_positions)
-        
-        self.front = pygame.image.load("assets/CH2-01.png") #CHARACTER
-        self.back = pygame.image.load("assets/CH2-02.png") #CHARACTER
-        self.left = pygame.image.load("assets/CH2-03.png") #CHARACTER
-        self.right = pygame.image.load("assets/CH2-04.png") #CHARACTER
-        
         self.score = 0
-        self.direction = (0, 1)  # The direction the character is facing, default is down
-        self.ready_to_move = False
+        self.direction = (0, 0)
 
-    def face_direction(self, dx, dy):
-        if self.direction == (dx, dy):
-            self.ready_to_move = True
-        else:
-            self.direction = (dx, dy)
-            self.ready_to_move = False
-
-    def move_character(self):
-        if self.ready_to_move:
-            new_x = self.char_pos[0] + self.direction[0]
-            new_y = self.char_pos[1] + self.direction[1]
-            if 0 <= new_x < BOARD_WIDTH and 0 <= new_y < BOARD_HEIGHT:
-                self.char_pos = [new_x, new_y]
-                self.ready_to_move = False
+    def move_character(self, dx, dy):
+        new_x = self.char_pos[0] + dx
+        new_y = self.char_pos[1] + dy
+        if 0 <= new_x < BOARD_WIDTH and 0 <= new_y < BOARD_HEIGHT:
+            self.char_pos = [new_x, new_y]
             if self.char_pos in self.wumpus_positions or self.char_pos in self.pit_positions:
                 print("Game Over!")
                 pygame.quit()
@@ -130,15 +114,16 @@ class WumpusGame:
         self.screen.blit(pit_img, (x * CELL_SIZE, y * CELL_SIZE))
 
     def spawn_character(self):
-        if self.direction == (0, 1):
-            self.screen.blit(char_d, (self.char_pos[0] * CELL_SIZE, self.char_pos[1] * CELL_SIZE))
-        elif self.direction == (-1, 0):
+        if self.direction == (-1, 0):
             self.screen.blit(char_l, (self.char_pos[0] * CELL_SIZE, self.char_pos[1] * CELL_SIZE))
-        elif self.direction == (0, -1):
-            self.screen.blit(char_up, (self.char_pos[0] * CELL_SIZE, self.char_pos[1] * CELL_SIZE))
         elif self.direction == (1, 0):
             self.screen.blit(char_r, (self.char_pos[0] * CELL_SIZE, self.char_pos[1] * CELL_SIZE))
-        
+        elif self.direction == (0, -1):
+            self.screen.blit(char_up, (self.char_pos[0] * CELL_SIZE, self.char_pos[1] * CELL_SIZE))
+        elif self.direction == (0, 1):
+            self.screen.blit(char_d, (self.char_pos[0] * CELL_SIZE, self.char_pos[1] * CELL_SIZE))
+
+
 
     def print_score(self):
         FONT = pygame.font.Font(None, 24)  
@@ -148,27 +133,41 @@ class WumpusGame:
 
     def main_loop(self):
         running = True
+        self.direction = (0, 0)  # The direction the character is facing
+        ready_to_move = False
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_LEFT:
-                        self.char_pos[0] = max(0, self.char_pos[0] - 1)
-                        self.face_direction(-1, 0)
-                        self.score -= 100
+                        if self.direction == (-1, 0) and ready_to_move:
+                            self.char_pos[0] = max(0, self.char_pos[0] - 1)
+                            ready_to_move = False
+                        else:
+                            self.direction = (-1, 0)
+                            ready_to_move = True
                     elif event.key == pygame.K_RIGHT:
-                        self.char_pos[0] = min(BOARD_WIDTH - 1, self.char_pos[0] + 1)
-                        self.face_direction(1, 0)
-                        self.score -= 100
+                        if self.direction == (1, 0) and ready_to_move:
+                            self.char_pos[0] = min(BOARD_WIDTH - 1, self.char_pos[0] + 1)
+                            ready_to_move = False
+                        else:
+                            self.direction = (1, 0)
+                            ready_to_move = True
                     elif event.key == pygame.K_UP:
-                        self.char_pos[1] = max(0, self.char_pos[1] - 1)
-                        self.face_direction(0, -1)
-                        self.score -= 100
+                        if self.direction == (0, -1) and ready_to_move:
+                            self.char_pos[1] = max(0, self.char_pos[1] - 1)
+                            ready_to_move = False
+                        else:
+                            self.direction = (0, -1)
+                            ready_to_move = True
                     elif event.key == pygame.K_DOWN:
-                        self.char_pos[1] = min(BOARD_HEIGHT - 1, self.char_pos[1] + 1)
-                        self.face_direction(0, 1)
-                        self.score -= 100
+                        if self.direction == (0, 1) and ready_to_move:
+                            self.char_pos[1] = min(BOARD_HEIGHT - 1, self.char_pos[1] + 1)
+                            ready_to_move = False
+                        else:
+                            self.direction = (0, 1)
+                            ready_to_move = True
                     elif event.key == pygame.K_g:
                         if tuple(self.char_pos) in self.gold_positions:
                             self.gold_positions.remove(tuple(self.char_pos))
