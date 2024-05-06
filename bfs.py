@@ -2,6 +2,7 @@ import pygame
 import sys
 import random
 from trial.constants import *
+from collections import deque
 
 
 class Node:
@@ -16,20 +17,21 @@ class Node:
     def __eq__(self, other):
         return self.x == other.x and self.y == other.y
 
+    def __hash__(self):
+        return hash((self.x, self.y))
+
     def __lt__(self, other):
         return self.f < other.f
 
     def heuristic(self, goal):
         return abs(self.x - goal.x) + abs(self.y - goal.y)
 
-    def astar(self, board, start, goal):
-        open_list = []
-        closed_list = []
+    def bfs(self, board, start, goal):
+        queue = deque([start])
+        visited = set()
 
-        open_list.append(start)
-
-        while open_list:
-            current = open_list.pop(0)
+        while queue:
+            current = queue.popleft()
 
             if current == goal:
                 path = []
@@ -38,7 +40,7 @@ class Node:
                     current = current.parent
                 return path[::-1]
 
-            closed_list.append(current)
+            visited.add(current)
 
             for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
                 x = current.x + dx
@@ -51,15 +53,11 @@ class Node:
 
                 neighbor = Node(x, y, current)
 
-                if neighbor in closed_list:
+                if neighbor in visited:
                     continue
 
-                neighbor.g = current.g + 1
-                neighbor.h = neighbor.heuristic(goal)
-                neighbor.f = neighbor.g + neighbor.h
-
-                if neighbor not in open_list:
-                    open_list.append(neighbor)
+                queue.append(neighbor)
+                visited.add(neighbor)
 
         return None
 
@@ -230,12 +228,11 @@ class WumpusGame:
                 start_node = Node(*self.char_pos)
                 gold_nodes = [Node(*pos) for pos in self.gold_positions]
                 shortest_path = None
-                min_distance = float('inf')
                 for goal_node in gold_nodes:
-                    path = start_node.astar(self.board_values, start_node, goal_node)
-                    if path and len(path) < min_distance:
+                    path = start_node.bfs(self.board_values, start_node, goal_node)
+                    if path and (not shortest_path or len(path) < len(shortest_path)):
                         shortest_path = path
-                        min_distance = len(path)
+
                 if shortest_path and len(shortest_path) > 1:
                     next_pos = shortest_path[1]  # Skip the current position
                     dx = next_pos[0] - self.char_pos[0]
@@ -244,6 +241,7 @@ class WumpusGame:
                     if tuple(self.char_pos) in self.gold_positions:
                         self.gold_positions.remove(tuple(self.char_pos))
                         self.score += 1000
+
 
             # Check for perception
             x, y = self.char_pos
@@ -273,7 +271,7 @@ class WumpusGame:
             pygame.display.flip()
             
             # Introduce a delay to control the speed
-            pygame_clock.tick(10)  # Adjust the value to control the speed
+            pygame_clock.tick(30)  # Adjust the value to control the speed
 
         pygame.quit()
         sys.exit()
