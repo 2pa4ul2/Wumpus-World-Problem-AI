@@ -1,8 +1,69 @@
 import pygame
 import sys
 import random
+import heapq
 from trial.constants import *
 
+class Node:
+    def __init__(self, x, y, parent=None):
+        self.x = x
+        self.y = y
+        self.parent = parent
+        self.g = 0
+        self.h = 0
+        self.f = 0
+
+    def __eq__(self, other):
+        return self.x == other.x and self.y == other.y
+
+    def __lt__(self, other):
+        return self.f < other.f
+
+    def heuristic(self, goal):
+        return abs(self.x - goal.x) + abs(self.y - goal.y)
+
+    def astar(self, board, start, goal):
+        open_list = []
+        closed_list = []
+
+        heapq.heappush(open_list, (start.f, start))
+
+        while open_list:
+            current = heapq.heappop(open_list)[1]
+
+            if current == goal:
+                path = []
+                while current:
+                    path.append((current.x, current.y))
+                    current = current.parent
+                return path[::-1]
+
+            closed_list.append(current)
+
+            for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
+                x = current.x + dx
+                y = current.y + dy
+
+                if x < 0 or x >= BOARD_WIDTH or y < 0 or y >= BOARD_HEIGHT:
+                    continue
+                if board[y][x] == 1:
+                    continue
+
+                neighbor = Node(x, y, current)
+
+                if neighbor in closed_list:
+                    continue
+
+                neighbor.g = current.g + 1
+                neighbor.h = neighbor.heuristic(goal)
+                neighbor.f = neighbor.g + neighbor.h
+
+                if (neighbor.f, neighbor) in open_list:
+                    continue
+
+                heapq.heappush(open_list, (neighbor.f, neighbor))
+
+        return None
 
 class WumpusGame:
     def __init__(self):
@@ -10,7 +71,7 @@ class WumpusGame:
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
         pygame.display.set_caption("15x8 Board with Pygame")
 
-        self.char_pos = [0, 0]
+        self.char_pos = [0, 0]  # Default position of the character
         self.board_values = [[0 for _ in range(BOARD_WIDTH)] for _ in range(BOARD_HEIGHT)]
         self.random_count = random.randint(1,5)
 
@@ -18,23 +79,28 @@ class WumpusGame:
         self.wumpus_positions = self.generate_wumpus_positions(self.random_count, self.gold_positions)
         self.pit_positions = self.generate_pit_positions(self.random_count, self.gold_positions)
         self.score = 0
-        self.direction = (0, 0)
+        self.direction = (0, 1)  # Default direction
 
     def move_character(self, dx, dy):
         new_x = self.char_pos[0] + dx
         new_y = self.char_pos[1] + dy
         if 0 <= new_x < BOARD_WIDTH and 0 <= new_y < BOARD_HEIGHT:
-            self.char_pos = [new_x, new_y]
-            if self.char_pos in self.wumpus_positions or self.char_pos in self.pit_positions:
-                print("Game Over!")
+            if (new_x, new_y) in self.wumpus_positions:
+                print("You encountered a wumpus! Game Over!")
                 pygame.quit()
                 sys.exit()
-            elif self.char_pos in self.gold_positions:
-                self.gold_positions.remove(tuple(self.char_pos))
-                if not self.gold_positions:
-                    print("You collected all the gold! You win!")
-                    pygame.quit()
-                    sys.exit()
+            elif (new_x, new_y) in self.pit_positions:
+                print("You fell into a pit! Game Over!")
+                pygame.quit()
+                sys.exit()
+            else:
+                self.char_pos = [new_x, new_y]
+                if self.char_pos in self.gold_positions:
+                    self.gold_positions.remove(tuple(self.char_pos))
+                    if not self.gold_positions:
+                        print("You collected all the gold! You win!")
+                        pygame.quit()
+                        sys.exit()
 
     def get_adjacent_cells(self, x, y):
         adjacent_cells = []
@@ -133,72 +199,50 @@ class WumpusGame:
         self.screen.blit(text_surface, (0, 0))
 
     def main_loop(self):
-        running = True
-        self.direction = (0, 1)  # The direction the character is facing
-        ready_to_move = False
-        while running:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_LEFT:
-                        if self.direction == (-1, 0) and ready_to_move:
-                            self.char_pos[0] = max(0, self.char_pos[0] - 1)
-                            ready_to_move = False
-                            self.score -= 100
-                        else:
-                            self.direction = (-1, 0)
-                            ready_to_move = True
-                    elif event.key == pygame.K_RIGHT:
-                        if self.direction == (1, 0) and ready_to_move:
-                            self.char_pos[0] = min(BOARD_WIDTH - 1, self.char_pos[0] + 1)
-                            ready_to_move = False
-                            self.score -= 100
-                        else:
-                            self.direction = (1, 0)
-                            ready_to_move = True
-                    elif event.key == pygame.K_UP:
-                        if self.direction == (0, -1) and ready_to_move:
-                            self.char_pos[1] = max(0, self.char_pos[1] - 1)
-                            ready_to_move = False
-                            self.score -= 100
-                        else:
-                            self.direction = (0, -1)
-                            ready_to_move = True
-                    elif event.key == pygame.K_DOWN:
-                        if self.direction == (0, 1) and ready_to_move:
-                            self.char_pos[1] = min(BOARD_HEIGHT - 1, self.char_pos[1] + 1)
-                            ready_to_move = False
-                            self.score -= 100
-                        else:
-                            self.direction = (0, 1)
-                            ready_to_move = True
-                    elif event.key == pygame.K_g:
+            pygame_clock = pygame.time.Clock()
+            running = True
+            while running:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        running = False
+
+                if self.gold_positions:  # Check if there is remaining gold
+                    start_node = Node(*self.char_pos)
+                    gold_nodes = [Node(*pos) for pos in self.gold_positions]
+                    shortest_path = None
+                    min_distance = float('inf')
+                    for goal_node in gold_nodes:
+                        path = start_node.astar(self.board_values, start_node, goal_node)
+                        if path and len(path) < min_distance:
+                            shortest_path = path
+                            min_distance = len(path)
+                    if shortest_path and len(shortest_path) > 1:
+                        next_pos = shortest_path[1]  # Skip the current position
+                        dx = next_pos[0] - self.char_pos[0]
+                        dy = next_pos[1] - self.char_pos[1]
+                        self.move_character(dx, dy)
                         if tuple(self.char_pos) in self.gold_positions:
                             self.gold_positions.remove(tuple(self.char_pos))
                             self.score += 1000
-                            print(f"Score: {self.score}")
-                    elif event.key == pygame.K_SPACE:
-                        ball_pos = [self.char_pos[0] + self.direction[0], self.char_pos[1] + self.direction[1]]
-                        if tuple(ball_pos) in self.wumpus_positions:
-                            self.wumpus_positions.remove(tuple(ball_pos))
-                            self.score += 1000
-                            print(f"Score: {self.score}")
 
-            self.draw_board()
-            for pos in self.gold_positions:
-                self.spawn_gold(*pos)
-            for pos in self.wumpus_positions:
-                self.spawn_wumpus(*pos)
-            for pos in self.pit_positions:
-                self.spawn_pit(*pos)
-            self.spawn_character()
-            self.print_score()
+                # Update the display
+                self.draw_board()
+                for pos in self.gold_positions:
+                    self.spawn_gold(*pos)
+                for pos in self.wumpus_positions:
+                    self.spawn_wumpus(*pos)
+                for pos in self.pit_positions:
+                    self.spawn_pit(*pos)
+                self.spawn_character()
+                self.print_score()
+                pygame.display.flip()
+                
+                # Introduce a delay to control the speed
+                pygame_clock.tick(5)  # Adjust the value to control the speed
 
-            pygame.display.flip()
+            pygame.quit()
+            sys.exit()
 
-        pygame.quit()
-        sys.exit()
 
 
 if __name__ == "__main__":

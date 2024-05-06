@@ -9,7 +9,7 @@ GRAY = (200, 200, 200)
 
 WIDTH, HEIGHT = 960, 640
 CELL_SIZE = 80
-BOARD_WIDTH, BOARD_HEIGHT = 5, 5
+BOARD_WIDTH, BOARD_HEIGHT = 8, 5
 
 tile_img = pygame.image.load("assets/tile3.jpg")
 tile_img = pygame.transform.scale(tile_img, (CELL_SIZE, CELL_SIZE))
