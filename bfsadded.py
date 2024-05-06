@@ -4,7 +4,6 @@ import random
 from trial.constants import *
 from collections import deque
 
-
 class Node:
     def __init__(self, x, y, parent=None):
         self.x = x
@@ -78,6 +77,17 @@ class WumpusGame:
         self.pit_positions = self.generate_pit_positions(self.random_count, self.gold_positions)
         self.score = 0
         self.direction = (0, 1)  # Default direction
+        
+        # Initialize knowledge base
+        self.knowledge_base = {
+            "stench": set(),
+            "breeze": set(),
+            "glitter": set(),
+            "safe": set(),
+            "visited": set(),
+            "pit": set(),
+            "wumpus": set()
+        }
 
     def move_character(self, dx, dy):
         new_x = self.char_pos[0] + dx
@@ -208,13 +218,95 @@ class WumpusGame:
         elif self.direction == (0, 1):
             self.screen.blit(char_d, (self.char_pos[0] * CELL_SIZE, self.char_pos[1] * CELL_SIZE))
 
-
-
     def print_score(self):
-        FONT = pygame.font.Font(None, 24)  
+        FONT = pygame.font.Font(None, 24)
         score_text = f"Score: {self.score}"
         text_surface = FONT.render(score_text, True, BLACK)
         self.screen.blit(text_surface, (0, 0))
+
+    def update_knowledge_base(self, percept):
+        x, y = self.char_pos
+        adjacent_cells = self.get_adjacent_cells(x, y)
+        if percept == "stench":
+            self.knowledge_base["stench"].add((x, y))
+            for adj_x, adj_y in adjacent_cells:
+                self.knowledge_base["wumpus"].add((adj_x, adj_y))
+        elif percept == "breeze":
+            self.knowledge_base["breeze"].add((x, y))
+            for adj_x, adj_y in adjacent_cells:
+                self.knowledge_base["pit"].add((adj_x, adj_y))
+        elif percept == "glitter":
+            self.knowledge_base["glitter"].add((x, y))
+        self.knowledge_base["visited"].add((x, y))
+
+    def infer_hazards(self):
+        for x, y in self.knowledge_base["visited"]:
+            if (x, y) not in self.knowledge_base["safe"]:
+                if all(adj_cell not in self.knowledge_base["pit"] for adj_cell in self.get_adjacent_cells(x, y)):
+                    self.knowledge_base["safe"].add((x, y))
+            if (x, y) not in self.knowledge_base["visited"]:
+                if all(adj_cell not in self.knowledge_base["wumpus"] for adj_cell in self.get_adjacent_cells(x, y)):
+                    self.knowledge_base["safe"].add((x, y))
+
+    def move_away_from_stench(self):
+        x, y = self.char_pos
+        adjacent_cells = self.get_adjacent_cells(x, y)
+        possible_moves = []
+        for adj_x, adj_y in adjacent_cells:
+            if (adj_x, adj_y) not in self.knowledge_base["stench"]:
+                possible_moves.append((adj_x - x, adj_y - y))  # Calculate the direction vector away from stench
+
+        if possible_moves:
+            # Choose a random direction away from stench
+            dx, dy = random.choice(possible_moves)
+            self.move_character(dx, dy)
+
+    def move_away_from_breeze(self):
+        x, y = self.char_pos
+        adjacent_cells = self.get_adjacent_cells(x, y)
+        possible_moves = []
+        for adj_x, adj_y in adjacent_cells:
+            if (adj_x, adj_y) not in self.knowledge_base["breeze"]:
+                possible_moves.append((adj_x - x, adj_y - y))  # Calculate the direction vector away from breeze
+
+        if possible_moves:
+            # Choose a random direction away from breeze
+            dx, dy = random.choice(possible_moves)
+            self.move_character(dx, dy)
+
+    def move_towards_wumpus(self):
+        x, y = self.char_pos
+        adjacent_cells = self.get_adjacent_cells(x, y)
+        possible_moves = []
+        for adj_x, adj_y in adjacent_cells:
+            if (adj_x, adj_y) in self.knowledge_base["wumpus"]:
+                possible_moves.append((adj_x - x, adj_y - y))  # Calculate the direction vector towards the Wumpus
+
+        if possible_moves:
+            # Choose a random direction towards the Wumpus
+            dx, dy = random.choice(possible_moves)
+            self.move_character(dx, dy)
+
+    def move_away_from_wumpus(self):
+        x, y = self.char_pos
+        adjacent_cells = self.get_adjacent_cells(x, y)
+        possible_moves = []
+        for adj_x, adj_y in adjacent_cells:
+            if (adj_x, adj_y) not in self.knowledge_base["wumpus"]:
+                possible_moves.append((adj_x - x, adj_y - y))  # Calculate the direction vector away from the Wumpus
+
+        if possible_moves:
+            # Choose a random direction away from the Wumpus
+            dx, dy = random.choice(possible_moves)
+            self.move_character(dx, dy)
+
+    def is_wumpus_clear(self):
+        x, y = self.char_pos
+        adjacent_cells = self.get_adjacent_cells(x, y)
+        for adj_x, adj_y in adjacent_cells:
+            if (adj_x, adj_y) in self.knowledge_base["wumpus"]:
+                return False
+        return True
 
     def main_loop(self):
         pygame_clock = pygame.time.Clock()
@@ -242,22 +334,32 @@ class WumpusGame:
                         self.gold_positions.remove(tuple(self.char_pos))
                         self.score += 1000
 
-
             # Check for perception
             x, y = self.char_pos
             if (x, y) in self.gold_positions:
-                print("You found gold!")
-                self.gold_positions.remove((x, y))
-                self.score += 100
+                self.update_knowledge_base("glitter")
 
             if self.check_pit_nearby(x, y):
-                print("There's a pit nearby!")
-                self.check_game_over(x,y)
+                self.update_knowledge_base("breeze")
 
             if self.check_wumpus_nearby(x, y):
-                print("There's a Wumpus nearby!")
-                self.check_game_over(x,y)
+                self.update_knowledge_base("stench")
 
+            # Decision-making based on perceptual cues and knowledge base
+            if (x, y) in self.knowledge_base["stench"]:
+                # Avoid moving towards stench
+                self.move_away_from_stench()
+            elif (x, y) in self.knowledge_base["breeze"]:
+                # Avoid moving towards breeze
+                self.move_away_from_breeze()
+            elif (x, y) in self.knowledge_base["wumpus"]:
+                # If the position of Wumpus is clear, move towards it to kill
+                if self.is_wumpus_clear():
+                    self.move_towards_wumpus()
+                else:
+                    # Otherwise, avoid moving towards the Wumpus
+                    self.move_away_from_wumpus()
+                
             # Update the display
             self.draw_board()
             for pos in self.gold_positions:
@@ -269,14 +371,15 @@ class WumpusGame:
             self.spawn_character()
             self.print_score()
             pygame.display.flip()
-            
+
+            # Infer hazards based on perceptual cues
+            self.infer_hazards()
+
             # Introduce a delay to control the speed
             pygame_clock.tick(30)  # Adjust the value to control the speed
 
         pygame.quit()
         sys.exit()
-
-
 
 
 if __name__ == "__main__":
