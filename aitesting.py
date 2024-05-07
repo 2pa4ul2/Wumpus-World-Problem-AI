@@ -73,7 +73,7 @@ class WumpusGame:
 
         self.char_pos = [0, 0]  # Default position of the character
         self.board_values = [[0 for _ in range(BOARD_WIDTH)] for _ in range(BOARD_HEIGHT)]
-        self.random_count = random.randint(1,5)
+        self.random_count = random.randint(5,5)
 
         self.gold_positions = self.generate_gold_positions(self.random_count)
         self.wumpus_positions = self.generate_wumpus_positions(self.random_count, self.gold_positions)
@@ -98,9 +98,10 @@ class WumpusGame:
                 if self.char_pos in self.gold_positions:
                     self.gold_positions.remove(tuple(self.char_pos))
                     if not self.gold_positions:
-                        print("You collected all the gold! You win!")
-                        pygame.quit()
-                        sys.exit()
+                        if tuple(self.char_pos) == (0, 0): 
+                            print("You collected all the gold! You win!")
+                            pygame.quit()
+                            sys.exit()
 
     def get_adjacent_cells(self, x, y):
         adjacent_cells = []
@@ -199,49 +200,66 @@ class WumpusGame:
         self.screen.blit(text_surface, (0, 0))
 
     def main_loop(self):
-            pygame_clock = pygame.time.Clock()
-            running = True
-            while running:
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        running = False
+        pygame_clock = pygame.time.Clock()
+        running = True
+        return_to_start = False  # Flag to indicate if the character is returning to start
+        while running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
 
-                if self.gold_positions:  # Check if there is remaining gold
-                    start_node = Node(*self.char_pos)
-                    gold_nodes = [Node(*pos) for pos in self.gold_positions]
-                    shortest_path = None
-                    min_distance = float('inf')
-                    for goal_node in gold_nodes:
-                        path = start_node.astar(self.board_values, start_node, goal_node)
-                        if path and len(path) < min_distance:
-                            shortest_path = path
-                            min_distance = len(path)
-                    if shortest_path and len(shortest_path) > 1:
-                        next_pos = shortest_path[1]  # Skip the current position
-                        dx = next_pos[0] - self.char_pos[0]
-                        dy = next_pos[1] - self.char_pos[1]
-                        self.move_character(dx, dy)
-                        if tuple(self.char_pos) in self.gold_positions:
-                            self.gold_positions.remove(tuple(self.char_pos))
-                            self.score += 1000
+            if self.gold_positions:  # Check if there is remaining gold
+                start_node = Node(*self.char_pos)
+                gold_nodes = [Node(*pos) for pos in self.gold_positions]
+                shortest_path = None
+                min_distance = float('inf')
+                for goal_node in gold_nodes:
+                    path = start_node.astar(self.board_values, start_node, goal_node)
+                    if path and len(path) < min_distance:
+                        shortest_path = path
+                        min_distance = len(path)
+                if shortest_path and len(shortest_path) > 1:
+                    next_pos = shortest_path[1]  # Skip the current position
+                    dx = next_pos[0] - self.char_pos[0]
+                    dy = next_pos[1] - self.char_pos[1]
+                    self.move_character(dx, dy)
+                    if tuple(self.char_pos) in self.gold_positions:
+                        self.gold_positions.remove(tuple(self.char_pos))
+                        self.score += 1000
+                        if not self.gold_positions:
+                            return_to_start = True
 
-                # Update the display
-                self.draw_board()
-                for pos in self.gold_positions:
-                    self.spawn_gold(*pos)
-                for pos in self.wumpus_positions:
-                    self.spawn_wumpus(*pos)
-                for pos in self.pit_positions:
-                    self.spawn_pit(*pos)
-                self.spawn_character()
-                self.print_score()
-                pygame.display.flip()
-                
-                # Introduce a delay to control the speed
-                pygame_clock.tick(5)  # Adjust the value to control the speed
+            elif return_to_start:  # If all gold collected, return to start
+                start_node = Node(*self.char_pos)
+                start_to_start_path = start_node.astar(self.board_values, start_node, Node(0, 0))
+                if start_to_start_path and len(start_to_start_path) > 1:
+                    next_pos = start_to_start_path[1]  # Skip the current position
+                    dx = next_pos[0] - self.char_pos[0]
+                    dy = next_pos[1] - self.char_pos[1]
+                    self.move_character(dx, dy)
+                    if tuple(self.char_pos) == (0, 0):
+                        print("You collected all the gold and returned to the start position! You win!")
+                        pygame.quit()
+                        sys.exit()
 
-            pygame.quit()
-            sys.exit()
+            # Update the display
+            self.draw_board()
+            for pos in self.gold_positions:
+                self.spawn_gold(*pos)
+            for pos in self.wumpus_positions:
+                self.spawn_wumpus(*pos)
+            for pos in self.pit_positions:
+                self.spawn_pit(*pos)
+            self.spawn_character()
+            self.print_score()
+            pygame.display.flip()
+
+            # Introduce a delay to control the speed
+            pygame_clock.tick(5)  # Adjust the value to control the speed
+
+        pygame.quit()
+        sys.exit()
+
 
 
 

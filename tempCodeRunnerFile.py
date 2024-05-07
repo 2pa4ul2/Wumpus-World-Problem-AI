@@ -1,9 +1,8 @@
 import pygame
 import sys
 import random
-from trial.constants import *
 from collections import deque
-
+from trial.constants import *  # Assuming constants are defined in constants.py
 
 class Node:
     def __init__(self, x, y, parent=None):
@@ -61,17 +60,33 @@ class Node:
 
         return None
 
+class Agent:
+    def __init__(self):
+        self.kb = {}  # Knowledge base
+
+    def perceive(self, x, y, surroundings):
+        # Update knowledge base based on perceptions
+        self.kb[(x, y)] = surroundings
+
+    def update_kb(self, x, y, value):
+        # Update knowledge base with inferred information
+        self.kb[(x, y)] = value
+
+    def make_decision(self, x, y, possible_moves):
+        # Make decision based on knowledge base and available moves
+        # For example, prioritize moves that lead to unexplored areas or away from hazards
+        return random.choice(possible_moves)
+
 class WumpusGame:
     def __init__(self):
         pygame.init()
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
         pygame.display.set_caption("15x8 Board with Pygame")
-
+        self.agent = Agent()
         # Initialize game variables
         self.char_pos = [0, 0]  # Default position of the character
         self.board_values = [[0 for _ in range(BOARD_WIDTH)] for _ in range(BOARD_HEIGHT)]
-        self.random_count = random.randint(5,8)
-
+        self.random_count = random.randint(5, 8)
         # Generate game elements (gold, Wumpus, pits)
         self.gold_positions = self.generate_gold_positions(self.random_count)
         self.wumpus_positions = self.generate_wumpus_positions(self.random_count, self.gold_positions)
@@ -93,12 +108,15 @@ class WumpusGame:
                 sys.exit()
             else:
                 self.char_pos = [new_x, new_y]
+                self.score -= 100
                 if self.char_pos in self.gold_positions:
                     self.gold_positions.remove(tuple(self.char_pos))
                     if not self.gold_positions:
                         print("You collected all the gold! You win!")
                         pygame.quit()
                         sys.exit()
+    #
+    
 
     def get_adjacent_cells(self, x, y):
         adjacent_cells = []
@@ -122,7 +140,7 @@ class WumpusGame:
         for _ in range(num_golds):
             x = random.randint(0, BOARD_WIDTH - 1)
             y = random.randint(0, BOARD_HEIGHT - 1)
-            if (x,y) not in gold_positions and (x,y) != tuple(self.char_pos): #prevents the object from being placed on top of each other
+            if (x, y) not in gold_positions and (x, y) != tuple(self.char_pos):  # Prevents object from being placed on top of each other
                 gold_positions.append((x, y))
         return gold_positions
 
@@ -132,7 +150,7 @@ class WumpusGame:
             while True:
                 x = random.randint(0, BOARD_WIDTH - 1)
                 y = random.randint(0, BOARD_HEIGHT - 1)
-                if (x,y) not in gold_positions and (x,y) != tuple(self.char_pos): #prevents the object from being placed on top of each other
+                if (x, y) not in gold_positions and (x, y) != tuple(self.char_pos):  # Prevents object from being placed on top of each other
                     wumpus_positions.append((x, y))
                     break
         return wumpus_positions
@@ -143,7 +161,7 @@ class WumpusGame:
             while True:
                 x = random.randint(0, BOARD_WIDTH - 1)
                 y = random.randint(0, BOARD_HEIGHT - 1)
-                if (x,y) not in gold_positions and (x,y) != tuple(self.char_pos): #prevents the object from being placed on top of each other
+                if (x, y) not in gold_positions and (x, y) != tuple(self.char_pos):  # Prevents object from being placed on top of each other
                     pit_positions.append((x, y))
                     break
         return pit_positions
@@ -187,7 +205,6 @@ class WumpusGame:
 
     def update_board_values(self, x, y, value):
         self.board_values[y][x] = value
-        print(self.board_values)
 
     def spawn_gold(self, x, y):
         self.screen.blit(gold_img, (x * CELL_SIZE, y * CELL_SIZE))
@@ -208,10 +225,8 @@ class WumpusGame:
         elif self.direction == (0, 1):
             self.screen.blit(char_d, (self.char_pos[0] * CELL_SIZE, self.char_pos[1] * CELL_SIZE))
 
-
-
     def print_score(self):
-        FONT = pygame.font.Font(None, 24)  
+        FONT = pygame.font.Font(None, 24)
         score_text = f"Score: {self.score}"
         text_surface = FONT.render(score_text, True, BLACK)
         self.screen.blit(text_surface, (0, 0))
@@ -242,7 +257,6 @@ class WumpusGame:
                         self.gold_positions.remove(tuple(self.char_pos))
                         self.score += 1000
 
-
             # Check for perception
             x, y = self.char_pos
             if (x, y) in self.gold_positions:
@@ -252,11 +266,11 @@ class WumpusGame:
 
             if self.check_pit_nearby(x, y):
                 print("There's a pit nearby!")
-                self.check_game_over(x,y)
+                self.check_game_over(x, y)
 
             if self.check_wumpus_nearby(x, y):
                 print("There's a Wumpus nearby!")
-                self.check_game_over(x,y)
+                self.check_game_over(x, y)
 
             # Update the display
             self.draw_board()
@@ -269,14 +283,12 @@ class WumpusGame:
             self.spawn_character()
             self.print_score()
             pygame.display.flip()
-            
+
             # Introduce a delay to control the speed
-            pygame_clock.tick(30)  # Adjust the value to control the speed
+            pygame_clock.tick(1200)  # Adjust the value to control the speed
 
         pygame.quit()
         sys.exit()
-
-
 
 
 if __name__ == "__main__":
