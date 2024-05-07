@@ -9,7 +9,7 @@ GRAY = (200, 200, 200)
 
 WIDTH, HEIGHT = 960, 640
 CELL_SIZE = 80
-BOARD_WIDTH, BOARD_HEIGHT = 5, 5
+BOARD_WIDTH, BOARD_HEIGHT = 8, 8
 
 tile_img = pygame.image.load("assets/tile3.jpg")
 tile_img = pygame.transform.scale(tile_img, (CELL_SIZE, CELL_SIZE))
@@ -37,3 +37,6 @@ wumpus_img = pygame.transform.scale(wumpus_img, (CELL_SIZE, CELL_SIZE))
 pit_img = pygame.image.load("assets/hole.png")
 pit_img = pygame.transform.scale(pit_img, (CELL_SIZE, CELL_SIZE))
 
+glitter_img = pygame.image.load("assets/glitter.png")
+stench_img = pygame.image.load("assets/stench.png")
+breeze_img = pygame.image.load("assets/breeze.png")

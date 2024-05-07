@@ -1,8 +1,9 @@
 import pygame
 import sys
 import random
+from trial.constants import *
 from collections import deque
-from trial.constants import *  # Assuming constants are defined in constants.py
+import heapq
 
 class Node:
     def __init__(self, x, y, parent=None):
@@ -25,12 +26,14 @@ class Node:
     def heuristic(self, goal):
         return abs(self.x - goal.x) + abs(self.y - goal.y)
 
-    def bfs(self, board, start, goal):
-        queue = deque([start])
-        visited = set()
+    def astar(self, board, start, goal):
+        open_list = []
+        closed_set = set()
 
-        while queue:
-            current = queue.popleft()
+        heapq.heappush(open_list, start)
+
+        while open_list:
+            current = heapq.heappop(open_list)
 
             if current == goal:
                 path = []
@@ -39,7 +42,7 @@ class Node:
                     current = current.parent
                 return path[::-1]
 
-            visited.add(current)
+            closed_set.add(current)
 
             for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
                 x = current.x + dx
@@ -52,11 +55,20 @@ class Node:
 
                 neighbor = Node(x, y, current)
 
-                if neighbor in visited:
+                if neighbor in closed_set:
                     continue
 
-                queue.append(neighbor)
-                visited.add(neighbor)
+                neighbor.g = current.g + 1
+                neighbor.h = neighbor.heuristic(goal)
+                neighbor.f = neighbor.g + neighbor.h
+
+                if neighbor not in open_list:
+                    heapq.heappush(open_list, neighbor)
+                else:
+                    for open_node in open_list:
+                        if open_node == neighbor and neighbor.g < open_node.g:
+                            open_list.remove(open_node)
+                            heapq.heappush(open_list, neighbor)
 
         return None
 
@@ -66,7 +78,10 @@ class Agent:
 
     def perceive(self, x, y, surroundings):
         # Update knowledge base based on perceptions
-        self.kb[(x, y)] = surroundings
+        self.kb[(x, y)] = surroundings  # Update the knowledge base with perceived surroundings
+        for adj_x, adj_y, adj in surroundings:
+            if 'Pit' in adj:
+                self.kb[(adj_x, adj_y)] = ['Unsafe']  
 
     def update_kb(self, x, y, value):
         # Update knowledge base with inferred information
@@ -74,8 +89,16 @@ class Agent:
 
     def make_decision(self, x, y, possible_moves):
         # Make decision based on knowledge base and available moves
-        # For example, prioritize moves that lead to unexplored areas or away from hazards
-        return random.choice(possible_moves)
+        safe_moves = []
+        for move in possible_moves:
+            new_x = x + move[0]
+            new_y = y + move[1]
+            if (new_x, new_y) not in self.kb or 'Unsafe' not in self.kb[(new_x, new_y)]:
+                safe_moves.append(move)
+        if safe_moves:
+            return random.choice(safe_moves)
+        else:
+            return (0, 0)  # If no safe move, stay in the same position
 
 class WumpusGame:
     def __init__(self):
@@ -86,22 +109,25 @@ class WumpusGame:
         # Initialize game variables
         self.char_pos = [0, 0]  # Default position of the character
         self.board_values = [[0 for _ in range(BOARD_WIDTH)] for _ in range(BOARD_HEIGHT)]
-        self.random_count = random.randint(3, 5)
+        self.random_count = random.randint(5, 8)
         # Generate game elements (gold, Wumpus, pits)
         self.gold_positions = self.generate_gold_positions(self.random_count)
         self.wumpus_positions = self.generate_wumpus_positions(self.random_count, self.gold_positions)
         self.pit_positions = self.generate_pit_positions(self.random_count, self.gold_positions)
         self.score = 0
         self.direction = (0, 1)  # Default direction
+        self.safe_positions = set()  # Store safe positions visited by the agent
+        self.original_pos = tuple(self.char_pos)
+        
 
     def move_character(self, dx, dy):
         new_x = self.char_pos[0] + dx
         new_y = self.char_pos[1] + dy
         if 0 <= new_x < BOARD_WIDTH and 0 <= new_y < BOARD_HEIGHT:
             if (new_x, new_y) in self.wumpus_positions:
-                print("You encountered a wumpus! Game Over!")
-                pygame.quit()
-                sys.exit()
+                print("You encountered a wumpus! You killed it!")
+                self.wumpus_positions.remove((new_x, new_y))
+                self.score -= 100  # Deduct points for killing the Wumpus
             elif (new_x, new_y) in self.pit_positions:
                 print("You fell into a pit! Game Over!")
                 pygame.quit()
@@ -109,6 +135,7 @@ class WumpusGame:
             else:
                 self.char_pos = [new_x, new_y]
                 self.score -= 100
+                self.safe_positions.add((new_x, new_y))
                 if self.char_pos in self.gold_positions:
                     self.gold_positions.remove(tuple(self.char_pos))
                     if not self.gold_positions:
@@ -127,6 +154,7 @@ class WumpusGame:
         if x > 0:
             adjacent_cells.append((x - 1, y))  # Left
         return adjacent_cells
+
 
     def print_text(self, text, x, y, color=(0, 0, 0), size=24):
         font = pygame.font.Font(None, size)
@@ -159,10 +187,15 @@ class WumpusGame:
             while True:
                 x = random.randint(0, BOARD_WIDTH - 1)
                 y = random.randint(0, BOARD_HEIGHT - 1)
-                if (x, y) not in gold_positions and (x, y) != tuple(self.char_pos):  # Prevents object from being placed on top of each other
+                if (x, y) not in gold_positions and (x, y) != tuple(self.char_pos) and not self.is_too_close_to_start(x, y):  # Prevents object from being placed on top of each other
                     pit_positions.append((x, y))
                     break
         return pit_positions
+
+    def is_too_close_to_start(self, x, y):
+        # Check if the specified position is too close to the start position
+        start_x, start_y = self.char_pos
+        return abs(x - start_x) <= 1 and abs(y - start_y) <= 1
 
     def draw_board(self):
         self.screen.fill(WHITE)
@@ -170,15 +203,18 @@ class WumpusGame:
             for x in range(BOARD_WIDTH):
                 self.screen.blit(tile_img, (x * CELL_SIZE, y * CELL_SIZE))
                 pygame.draw.rect(self.screen, BLACK, (x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE), 1)
-        for pos in self.wumpus_positions:
-            for adj in self.get_adjacent_cells(*pos):
-                self.print_text("Stench", *adj)
-        for pos in self.gold_positions:
-            for adj in self.get_adjacent_cells(*pos):
-                self.print_text("glitter", *adj)
-        for pos in self.pit_positions:
-            for adj in self.get_adjacent_cells(*pos):
-                self.print_text("breeze", *adj)
+            for pos in self.wumpus_positions:
+                for adj in self.get_adjacent_cells(*pos):
+                    scaled_stench_img = pygame.transform.scale(stench_img, (CELL_SIZE, CELL_SIZE))
+                    self.screen.blit(scaled_stench_img, (adj[0] * CELL_SIZE, adj[1] * CELL_SIZE))
+            for pos in self.gold_positions:
+                for adj in self.get_adjacent_cells(*pos):
+                    scaled_glitter_img = pygame.transform.scale(glitter_img, (CELL_SIZE, CELL_SIZE))
+                    self.screen.blit(scaled_glitter_img, (adj[0] * CELL_SIZE, adj[1] * CELL_SIZE))
+            for pos in self.pit_positions:
+                for adj in self.get_adjacent_cells(*pos):
+                    scaled_breeze_img = pygame.transform.scale(breeze_img, (CELL_SIZE, CELL_SIZE))
+                    self.screen.blit(scaled_breeze_img, (adj[0] * CELL_SIZE, adj[1] * CELL_SIZE))
         self.spawn_character()
 
     def check_pit_nearby(self, x, y):
@@ -233,18 +269,25 @@ class WumpusGame:
         # Check if Wumpus is in the line of fire
         dx, dy = self.direction
         next_x, next_y = x + dx, y + dy
-        while 0 <= next_x < BOARD_WIDTH and 0 <= next_y < BOARD_HEIGHT:
+        iterations = 0  # Initialize the iteration counter
+        while iterations < 5 and 0 <= next_x < BOARD_WIDTH and 0 <= next_y < BOARD_HEIGHT:
             if (next_x, next_y) in self.wumpus_positions:
                 # Kill the Wumpus
                 self.wumpus_positions.remove((next_x, next_y))
+                self.score -= 500
                 return True
             next_x += dx
             next_y += dy
+            iterations += 1
         return False
+
 
     def main_loop(self):
         pygame_clock = pygame.time.Clock()
         running = True
+        all_gold_collected = not self.gold_positions
+        reached_original_pos = False  # Add a flag to track if the character reached the original position
+        return_path = []  # Stores the path to return to the starting position
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -255,7 +298,7 @@ class WumpusGame:
                 gold_nodes = [Node(*pos) for pos in self.gold_positions]
                 shortest_path = None
                 for goal_node in gold_nodes:
-                    path = start_node.bfs(self.board_values, start_node, goal_node)
+                    path = start_node.astar(self.board_values, start_node, goal_node)
                     if path and (not shortest_path or len(path) < len(shortest_path)):
                         shortest_path = path
 
@@ -267,6 +310,42 @@ class WumpusGame:
                     if tuple(self.char_pos) in self.gold_positions:
                         self.gold_positions.remove(tuple(self.char_pos))
                         self.score += 1000
+                elif shortest_path:
+                    print("Reached dead end. Backtracking...")
+                    prev_pos = shortest_path[-2]  # Get the second last position
+                    dx = prev_pos[0] - self.char_pos[0]
+                    dy = prev_pos[1] - self.char_pos[1]
+                    self.move_character(dx, dy)
+                else:
+                    # Check if the character is at the original position
+                    if all_gold_collected and not reached_original_pos:
+                        if not return_path:
+                            # If return path is not calculated yet, calculate it
+                            return_path = start_node.astar(self.board_values, start_node, Node(*self.original_pos))
+                        if return_path:
+                            # If there is a return path, move towards the next cell in the path
+                            next_pos = return_path.pop(0)
+                            dx = next_pos[0] - self.char_pos[0]
+                            dy = next_pos[1] - self.char_pos[1]
+                            self.move_character(dx, dy)
+                            if tuple(self.char_pos) == self.original_pos:
+                                print("You returned to the starting position!")
+                                reached_original_pos = True  # Update the flag
+            else:
+                # All gold collected, return to the starting position
+                if not reached_original_pos:
+                    if not return_path:
+                        # If return path is not calculated yet, calculate it
+                        return_path = start_node.astar(self.board_values, start_node, Node(*self.original_pos))
+                    if return_path:
+                        # If there is a return path, move towards the next cell in the path
+                        next_pos = return_path.pop(0)
+                        dx = next_pos[0] - self.char_pos[0]
+                        dy = next_pos[1] - self.char_pos[1]
+                        self.move_character(dx, dy)
+                        if tuple(self.char_pos) == self.original_pos:
+                            print("You returned to the starting position!")
+                            reached_original_pos = True  # Update the flag
 
             # Check for perception
             x, y = self.char_pos
@@ -298,10 +377,12 @@ class WumpusGame:
             pygame.display.flip()
 
             # Introduce a delay to control the speed
-            pygame_clock.tick(1200)  # Adjust the value to control the speed
+            pygame_clock.tick(5)  # Adjust the value to control the speed
 
         pygame.quit()
         sys.exit()
+
+
 
 
 if __name__ == "__main__":
