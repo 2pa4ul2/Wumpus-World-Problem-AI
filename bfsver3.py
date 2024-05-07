@@ -86,7 +86,7 @@ class WumpusGame:
         # Initialize game variables
         self.char_pos = [0, 0]  # Default position of the character
         self.board_values = [[0 for _ in range(BOARD_WIDTH)] for _ in range(BOARD_HEIGHT)]
-        self.random_count = random.randint(5, 8)
+        self.random_count = random.randint(3, 5)
         # Generate game elements (gold, Wumpus, pits)
         self.gold_positions = self.generate_gold_positions(self.random_count)
         self.wumpus_positions = self.generate_wumpus_positions(self.random_count, self.gold_positions)

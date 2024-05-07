@@ -142,7 +142,7 @@ class WumpusGame:
                     running = False
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_LEFT:
-                        if self.direction == (-1, 0) and ready_to_move:
+                        if self.direction == (-1, 0):
                             self.char_pos[0] = max(0, self.char_pos[0] - 1)
                             ready_to_move = False
                             self.score -= 100
@@ -150,7 +150,7 @@ class WumpusGame:
                             self.direction = (-1, 0)
                             ready_to_move = True
                     elif event.key == pygame.K_RIGHT:
-                        if self.direction == (1, 0) and ready_to_move:
+                        if self.direction == (1, 0):
                             self.char_pos[0] = min(BOARD_WIDTH - 1, self.char_pos[0] + 1)
                             ready_to_move = False
                             self.score -= 100
@@ -158,7 +158,7 @@ class WumpusGame:
                             self.direction = (1, 0)
                             ready_to_move = True
                     elif event.key == pygame.K_UP:
-                        if self.direction == (0, -1) and ready_to_move:
+                        if self.direction == (0, -1):
                             self.char_pos[1] = max(0, self.char_pos[1] - 1)
                             ready_to_move = False
                             self.score -= 100
@@ -166,7 +166,7 @@ class WumpusGame:
                             self.direction = (0, -1)
                             ready_to_move = True
                     elif event.key == pygame.K_DOWN:
-                        if self.direction == (0, 1) and ready_to_move:
+                        if self.direction == (0, 1) :
                             self.char_pos[1] = min(BOARD_HEIGHT - 1, self.char_pos[1] + 1)
                             ready_to_move = False
                             self.score -= 100
