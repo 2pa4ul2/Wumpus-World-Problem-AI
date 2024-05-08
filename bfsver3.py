@@ -1,7 +1,7 @@
 import pygame
 import sys
 import random
-from trial.constants import *
+from states.constants import *
 from collections import deque
 import heapq
 

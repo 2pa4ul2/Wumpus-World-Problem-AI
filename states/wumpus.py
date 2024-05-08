@@ -1,9 +1,9 @@
 import pygame
 import sys
 import random
-from states.constants import *
 from collections import deque
-import heapq
+from constants import *
+from agent import Agent
 
 class Node:
     def __init__(self, x, y, parent=None):
@@ -50,34 +50,7 @@ class Node:
                 if neighbor in visited:
                     continue
                 queue.append(neighbor)
-
-class Agent:
-    def __init__(self):
-        self.kb = {}  # Knowledge base
-
-    def perceive(self, x, y, surroundings):
-        # Update knowledge base based on perceptions
-        self.kb[(x, y)] = surroundings  # Update the knowledge base with perceived surroundings
-        for adj_x, adj_y, adj in surroundings:
-            if 'Pit' in adj:
-                self.kb[(adj_x, adj_y)] = ['Unsafe']  
-
-    def update_kb(self, x, y, value):
-        # Update knowledge base with inferred information
-        self.kb[(x, y)] = value
-
-    def make_decision(self, x, y, possible_moves):
-        # Make decision based on knowledge base and available moves
-        safe_moves = []
-        for move in possible_moves:
-            new_x = x + move[0]
-            new_y = y + move[1]
-            if (new_x, new_y) not in self.kb or 'Unsafe' not in self.kb[(new_x, new_y)]:
-                safe_moves.append(move)
-        if safe_moves:
-            return random.choice(safe_moves)
-        else:
-            return (0, 0)  # If no safe move, stay in the same position
+        return None
 
 class WumpusGame:
     def __init__(self):
@@ -88,17 +61,18 @@ class WumpusGame:
         # Initialize game variables
         self.char_pos = [0, 0]  # Default position of the character
         self.board_values = [[0 for _ in range(BOARD_WIDTH)] for _ in range(BOARD_HEIGHT)]  # Initialize the matrix
-        self.random_count = random.randint(3, 4)
+        self.random_count = random.randint(4, 5)
+        self.random_count_wumpus = random.randint(3, 4)
+        self.random_count_pit = random.randint(2, 3)
         # Generate game elements (gold, Wumpus, pits)
         self.gold_positions = self.generate_gold_positions(self.random_count)
-        self.wumpus_positions = self.generate_wumpus_positions(self.random_count, self.gold_positions)
-        self.pit_positions = self.generate_pit_positions(self.random_count, self.gold_positions, self.wumpus_positions)
+        self.wumpus_positions = self.generate_wumpus_positions(self.random_count_wumpus, self.gold_positions)
+        self.pit_positions = self.generate_pit_positions(self.random_count_pit, self.gold_positions)
         self.score = 0
         self.direction = (0, 1)  # Default direction
         self.safe_positions = set()  # Store safe positions visited by the agent
         self.original_pos = tuple(self.char_pos)
         self.update_board_values()  # Update the board values initially
-        
 
     def move_character(self, dx, dy):
         new_x = self.char_pos[0] + dx
@@ -116,12 +90,24 @@ class WumpusGame:
                 self.char_pos = [new_x, new_y]
                 self.score -= 100
                 self.safe_positions.add((new_x, new_y))
+                if dx == 1:
+                    self.direction = (1, 0)  # Moving right
+                elif dx == -1:
+                    self.direction = (-1, 0)  # Moving left
+                elif dy == 1:
+                    self.direction = (0, 1)  # Moving down
+                elif dy == -1:
+                    self.direction = (0, -1)  # Moving up
                 if self.char_pos in self.gold_positions:
                     self.gold_positions.remove(tuple(self.char_pos))
                     if not self.gold_positions:
                         print("You collected all the gold! You win!")
                         pygame.quit()
                         sys.exit()
+                if self.char_pos in self.original_pos:
+                    print("You returned to the starting position!")
+                    pygame.quit()
+                    sys.exit()
 
     def get_adjacent_cells(self, x, y):
         adjacent_cells = []
@@ -161,24 +147,16 @@ class WumpusGame:
                     break
         return wumpus_positions
 
-    def generate_pit_positions(self, pit, gold_positions, wumpus_positions):
+    def generate_pit_positions(self, pit, gold_positions):
         pit_positions = []
         for _ in range(pit):
             while True:
                 x = random.randint(0, BOARD_WIDTH - 1)
                 y = random.randint(0, BOARD_HEIGHT - 1)
-                if (x, y) not in gold_positions and (x, y) != tuple(self.char_pos) \
-                        and not self.is_too_close_to_start(x, y) \
-                        and not self.is_adjacent_to_pit(x, y, pit_positions):  # Prevents object from being placed on top of each other
+                if (x, y) not in gold_positions and (x, y) != tuple(self.char_pos) and not self.is_too_close_to_start(x, y):  # Prevents object from being placed on top of each other
                     pit_positions.append((x, y))
                     break
         return pit_positions
-
-    def is_adjacent_to_pit(self, x, y, pit_positions):
-        for px, py in pit_positions:
-            if abs(x - px) <= 1 and abs(y - py) <= 1:
-                return True
-        return False
 
     def is_too_close_to_start(self, x, y):
         # Check if the specified position is too close to the start position
@@ -239,6 +217,10 @@ class WumpusGame:
             
     def print_board(self):
         # Print the matrix representation of the game board
+        for row in self.board_values:
+            print(" ".join(str(cell) for cell in row))
+
+    def print_board(self):
         symbols = {
             0: '.',  # Empty cell
             'P': 'P',  # Pit
@@ -307,59 +289,7 @@ class WumpusGame:
                 if event.type == pygame.QUIT:
                     running = False
 
-            if self.gold_positions:  # Check if there is remaining gold
-                start_node = Node(*self.char_pos)
-                gold_nodes = [Node(*pos) for pos in self.gold_positions]
-                shortest_path = None
-                for goal_node in gold_nodes:
-                    path = start_node.bfs(self.board_values, start_node, goal_node)  # Using BFS instead of A*
-                    if path and (not shortest_path or len(path) < len(shortest_path)):
-                        shortest_path = path
-
-                if shortest_path and len(shortest_path) > 1:
-                    next_pos = shortest_path[1]  # Skip the current position
-                    dx = next_pos[0] - self.char_pos[0]
-                    dy = next_pos[1] - self.char_pos[1]
-                    self.move_character(dx, dy)
-                    if tuple(self.char_pos) in self.gold_positions:
-                        self.gold_positions.remove(tuple(self.char_pos))
-                        self.score += 1000
-                elif shortest_path:
-                    print("Reached dead end. Backtracking...")
-                    prev_pos = shortest_path[-2]  # Get the second last position
-                    dx = prev_pos[0] - self.char_pos[0]
-                    dy = prev_pos[1] - self.char_pos[1]
-                    self.move_character(dx, dy)
-                else:
-                    # Check if the character is at the original position
-                    if all_gold_collected and not reached_original_pos:
-                        if not return_path:
-                            # If return path is not calculated yet, calculate it
-                            return_path = start_node.bfs(self.board_values, start_node, Node(*self.original_pos))
-                        if return_path:
-                            # If there is a return path, move towards the next cell in the path
-                            next_pos = return_path.pop(0)
-                            dx = next_pos[0] - self.char_pos[0]
-                            dy = next_pos[1] - self.char_pos[1]
-                            self.move_character(dx, dy)
-                            if tuple(self.char_pos) == self.original_pos:
-                                print("You returned to the starting position!")
-                                reached_original_pos = True  # Update the flag
-            else:
-                # All gold collected, return to the starting position
-                if not reached_original_pos:
-                    if not return_path:
-                        # If return path is not calculated yet, calculate it
-                        return_path = start_node.bfs(self.board_values, start_node, Node(*self.original_pos))
-                    if return_path:
-                        # If there is a return path, move towards the next cell in the path
-                        next_pos = return_path.pop(0)
-                        dx = next_pos[0] - self.char_pos[0]
-                        dy = next_pos[1] - self.char_pos[1]
-                        self.move_character(dx, dy)
-                        if tuple(self.char_pos) == self.original_pos:
-                            print("You returned to the starting position!")
-                            reached_original_pos = True  # Update the flag
+            self.handle_ai_movement(all_gold_collected, reached_original_pos, return_path)
 
             # Check for perception
             x, y = self.char_pos
@@ -392,11 +322,63 @@ class WumpusGame:
             pygame.display.flip()
 
             # Introduce a delay to control the speed
-            pygame_clock.tick(2)  # Adjust the value to control the speed
+            pygame_clock.tick(5)  # Adjust the value to control the speed
 
         pygame.quit()
         sys.exit()
 
-if __name__ == "__main__":
-    game = WumpusGame()
-    game.main_loop()
+    def handle_ai_movement(self, all_gold_collected, reached_original_pos, return_path):
+        if self.gold_positions:  # Check if there is remaining gold
+            start_node = Node(*self.char_pos)
+            gold_nodes = [Node(*pos) for pos in self.gold_positions]
+            shortest_path = None
+            for goal_node in gold_nodes:
+                path = start_node.bfs(self.board_values, start_node, goal_node)  # Using BFS instead of A*
+                if path and (not shortest_path or len(path) < len(shortest_path)):
+                    shortest_path = path
+
+            if shortest_path and len(shortest_path) > 1:
+                next_pos = shortest_path[1]  # Skip the current position
+                dx = next_pos[0] - self.char_pos[0]
+                dy = next_pos[1] - self.char_pos[1]
+                self.move_character(dx, dy)
+                if tuple(self.char_pos) in self.gold_positions:
+                    self.gold_positions.remove(tuple(self.char_pos))
+                    self.score += 1000
+            elif shortest_path:
+                print("Reached dead end. Backtracking...")
+                prev_pos = shortest_path[-2]  # Get the second last position
+                dx = prev_pos[0] - self.char_pos[0]
+                dy = prev_pos[1] - self.char_pos[1]
+                self.move_character(dx, dy)
+            else:
+                # Check if the character is at the original position
+                if all_gold_collected and not reached_original_pos:
+                    if not return_path:
+                        # If return path is not calculated yet, calculate it
+                        return_path = start_node.bfs(self.board_values, start_node, Node(*self.original_pos))
+                    if return_path:
+                        # If there is a return path, move towards the next cell in the path
+                        next_pos = return_path.pop(0)
+                        dx = next_pos[0] - self.char_pos[0]
+                        dy = next_pos[1] - self.char_pos[1]
+                        self.move_character(dx, dy)
+                        if tuple(self.char_pos) == self.original_pos:
+                            print("You returned to the starting position!")
+                            reached_original_pos = True  # Update the flag
+        else:
+            # All gold collected, return to the starting position
+            if not reached_original_pos:
+                if not return_path:
+                    # If return path is not calculated yet, calculate it
+                    start_node = Node(*self.char_pos)
+                    return_path = start_node.bfs(self.board_values, start_node, Node(*self.original_pos))
+                if return_path:
+                    # If there is a return path, move towards the next cell in the path
+                    next_pos = return_path.pop(0)
+                    dx = next_pos[0] - self.char_pos[0]
+                    dy = next_pos[1] - self.char_pos[1]
+                    self.move_character(dx, dy)
+                    if tuple(self.char_pos) == self.original_pos:
+                        print("You returned to the starting position!")
+                        reached_original_pos = True  # Update the flag

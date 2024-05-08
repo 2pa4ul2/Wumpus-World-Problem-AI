@@ -1,7 +1,7 @@
 import pygame
 import sys
 import random
-from constants import *
+from states.constants import *
 
 
 class WumpusGame:

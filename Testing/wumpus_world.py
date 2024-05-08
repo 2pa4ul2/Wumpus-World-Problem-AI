@@ -2,7 +2,7 @@ import pygame
 import sys
 import random
 from collections import deque
-from trial.constants import *  # Assuming constants are defined in constants.py
+from states.constants import *  # Assuming constants are defined in constants.py
 
 import numpy as np
 
