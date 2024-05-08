@@ -26,51 +26,30 @@ class Node:
     def heuristic(self, goal):
         return abs(self.x - goal.x) + abs(self.y - goal.y)
 
-    def astar(self, board, start, goal):
-        open_list = []
-        closed_set = set()
+    def bfs(self, board, start, goal):
+        queue = deque([start])
+        visited = set()
 
-        heapq.heappush(open_list, start)
-
-        while open_list:
-            current = heapq.heappop(open_list)
-
+        while queue:
+            current = queue.popleft()
             if current == goal:
                 path = []
                 while current:
                     path.append((current.x, current.y))
                     current = current.parent
                 return path[::-1]
-
-            closed_set.add(current)
-
+            visited.add(current)
             for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
                 x = current.x + dx
                 y = current.y + dy
-
                 if x < 0 or x >= BOARD_WIDTH or y < 0 or y >= BOARD_HEIGHT:
                     continue
                 if board[y][x] == 1:
                     continue
-
                 neighbor = Node(x, y, current)
-
-                if neighbor in closed_set:
+                if neighbor in visited:
                     continue
-
-                neighbor.g = current.g + 1
-                neighbor.h = neighbor.heuristic(goal)
-                neighbor.f = neighbor.g + neighbor.h
-
-                if neighbor not in open_list:
-                    heapq.heappush(open_list, neighbor)
-                else:
-                    for open_node in open_list:
-                        if open_node == neighbor and neighbor.g < open_node.g:
-                            open_list.remove(open_node)
-                            heapq.heappush(open_list, neighbor)
-
-        return None
+                queue.append(neighbor)
 
 class Agent:
     def __init__(self):
@@ -109,11 +88,11 @@ class WumpusGame:
         # Initialize game variables
         self.char_pos = [0, 0]  # Default position of the character
         self.board_values = [[0 for _ in range(BOARD_WIDTH)] for _ in range(BOARD_HEIGHT)]  # Initialize the matrix
-        self.random_count = random.randint(5, 8)
+        self.random_count = random.randint(3, 4)
         # Generate game elements (gold, Wumpus, pits)
         self.gold_positions = self.generate_gold_positions(self.random_count)
         self.wumpus_positions = self.generate_wumpus_positions(self.random_count, self.gold_positions)
-        self.pit_positions = self.generate_pit_positions(self.random_count, self.gold_positions)
+        self.pit_positions = self.generate_pit_positions(self.random_count, self.gold_positions, self.wumpus_positions)
         self.score = 0
         self.direction = (0, 1)  # Default direction
         self.safe_positions = set()  # Store safe positions visited by the agent
@@ -182,16 +161,24 @@ class WumpusGame:
                     break
         return wumpus_positions
 
-    def generate_pit_positions(self, pit, gold_positions):
+    def generate_pit_positions(self, pit, gold_positions, wumpus_positions):
         pit_positions = []
         for _ in range(pit):
             while True:
                 x = random.randint(0, BOARD_WIDTH - 1)
                 y = random.randint(0, BOARD_HEIGHT - 1)
-                if (x, y) not in gold_positions and (x, y) != tuple(self.char_pos) and not self.is_too_close_to_start(x, y):  # Prevents object from being placed on top of each other
+                if (x, y) not in gold_positions and (x, y) != tuple(self.char_pos) \
+                        and not self.is_too_close_to_start(x, y) \
+                        and not self.is_adjacent_to_pit(x, y, pit_positions):  # Prevents object from being placed on top of each other
                     pit_positions.append((x, y))
                     break
         return pit_positions
+
+    def is_adjacent_to_pit(self, x, y, pit_positions):
+        for px, py in pit_positions:
+            if abs(x - px) <= 1 and abs(y - py) <= 1:
+                return True
+        return False
 
     def is_too_close_to_start(self, x, y):
         # Check if the specified position is too close to the start position
@@ -252,10 +239,6 @@ class WumpusGame:
             
     def print_board(self):
         # Print the matrix representation of the game board
-        for row in self.board_values:
-            print(" ".join(str(cell) for cell in row))
-
-    def print_board(self):
         symbols = {
             0: '.',  # Empty cell
             'P': 'P',  # Pit
@@ -329,7 +312,7 @@ class WumpusGame:
                 gold_nodes = [Node(*pos) for pos in self.gold_positions]
                 shortest_path = None
                 for goal_node in gold_nodes:
-                    path = start_node.astar(self.board_values, start_node, goal_node)
+                    path = start_node.bfs(self.board_values, start_node, goal_node)  # Using BFS instead of A*
                     if path and (not shortest_path or len(path) < len(shortest_path)):
                         shortest_path = path
 
@@ -352,7 +335,7 @@ class WumpusGame:
                     if all_gold_collected and not reached_original_pos:
                         if not return_path:
                             # If return path is not calculated yet, calculate it
-                            return_path = start_node.astar(self.board_values, start_node, Node(*self.original_pos))
+                            return_path = start_node.bfs(self.board_values, start_node, Node(*self.original_pos))
                         if return_path:
                             # If there is a return path, move towards the next cell in the path
                             next_pos = return_path.pop(0)
@@ -367,7 +350,7 @@ class WumpusGame:
                 if not reached_original_pos:
                     if not return_path:
                         # If return path is not calculated yet, calculate it
-                        return_path = start_node.astar(self.board_values, start_node, Node(*self.original_pos))
+                        return_path = start_node.bfs(self.board_values, start_node, Node(*self.original_pos))
                     if return_path:
                         # If there is a return path, move towards the next cell in the path
                         next_pos = return_path.pop(0)
@@ -409,13 +392,10 @@ class WumpusGame:
             pygame.display.flip()
 
             # Introduce a delay to control the speed
-            pygame_clock.tick(5)  # Adjust the value to control the speed
+            pygame_clock.tick(2)  # Adjust the value to control the speed
 
         pygame.quit()
         sys.exit()
-
-
-
 
 if __name__ == "__main__":
     game = WumpusGame()
