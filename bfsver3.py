@@ -108,7 +108,7 @@ class WumpusGame:
         self.agent = Agent()
         # Initialize game variables
         self.char_pos = [0, 0]  # Default position of the character
-        self.board_values = [[0 for _ in range(BOARD_WIDTH)] for _ in range(BOARD_HEIGHT)]
+        self.board_values = [[0 for _ in range(BOARD_WIDTH)] for _ in range(BOARD_HEIGHT)]  # Initialize the matrix
         self.random_count = random.randint(5, 8)
         # Generate game elements (gold, Wumpus, pits)
         self.gold_positions = self.generate_gold_positions(self.random_count)
@@ -118,6 +118,7 @@ class WumpusGame:
         self.direction = (0, 1)  # Default direction
         self.safe_positions = set()  # Store safe positions visited by the agent
         self.original_pos = tuple(self.char_pos)
+        self.update_board_values()  # Update the board values initially
         
 
     def move_character(self, dx, dy):
@@ -237,8 +238,38 @@ class WumpusGame:
             pygame.quit()
             sys.exit()
 
-    def update_board_values(self, x, y, value):
-        self.board_values[y][x] = value
+    def update_board_values(self):
+        # Update the matrix based on game elements
+        for pos in self.gold_positions:
+            x, y = pos
+            self.board_values[y][x] = "G"  # Represent gold
+        for pos in self.wumpus_positions:
+            x, y = pos
+            self.board_values[y][x] = "W"  # Represent Wumpus
+        for pos in self.pit_positions:
+            x, y = pos
+            self.board_values[y][x] = "P"  # Represent 
+            
+    def print_board(self):
+        # Print the matrix representation of the game board
+        for row in self.board_values:
+            print(" ".join(str(cell) for cell in row))
+
+    def print_board(self):
+        symbols = {
+            0: '.',  # Empty cell
+            'P': 'P',  # Pit
+            'G': 'G',  # Gold
+            'W': 'W',  # Wumpus
+            'C': 'C'   # Character
+        }
+        for y in range(BOARD_HEIGHT):
+            for x in range(BOARD_WIDTH):
+                if (x, y) == tuple(self.char_pos):
+                    print(symbols['C'], end=' ')
+                else:
+                    print(symbols[self.board_values[y][x]], end=' ')
+            print()
 
     def spawn_gold(self, x, y):
         self.screen.blit(gold_img, (x * CELL_SIZE, y * CELL_SIZE))
@@ -366,6 +397,7 @@ class WumpusGame:
 
             # Update the display
             self.draw_board()
+            self.print_board()
             for pos in self.gold_positions:
                 self.spawn_gold(*pos)
             for pos in self.wumpus_positions:
