@@ -88,11 +88,12 @@ class WumpusGame:
         # Initialize game variables
         self.char_pos = [0, 0]  # Default position of the character
         self.board_values = [[0 for _ in range(BOARD_WIDTH)] for _ in range(BOARD_HEIGHT)]  # Initialize the matrix
-        self.random_count = random.randint(3, 4)
+        self.random_count = random.randint(4, 5)
+        self.random_count_pit = random.randint(2,2)
         # Generate game elements (gold, Wumpus, pits)
         self.gold_positions = self.generate_gold_positions(self.random_count)
         self.wumpus_positions = self.generate_wumpus_positions(self.random_count, self.gold_positions)
-        self.pit_positions = self.generate_pit_positions(self.random_count, self.gold_positions, self.wumpus_positions)
+        self.pit_positions = self.generate_pit_positions(self.random_count_pit, self.gold_positions, self.wumpus_positions)
         self.score = 0
         self.direction = (0, 1)  # Default direction
         self.safe_positions = set()  # Store safe positions visited by the agent

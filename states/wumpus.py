@@ -61,9 +61,9 @@ class WumpusGame:
         # Initialize game variables
         self.char_pos = [0, 0]  # Default position of the character
         self.board_values = [[0 for _ in range(BOARD_WIDTH)] for _ in range(BOARD_HEIGHT)]  # Initialize the matrix
-        self.random_count = random.randint(4, 5)
-        self.random_count_wumpus = random.randint(3, 4)
-        self.random_count_pit = random.randint(2, 3)
+        self.random_count = random.randint(4, 4)
+        self.random_count_wumpus = random.randint(5, 5)
+        self.random_count_pit = random.randint(2, 2)
         # Generate game elements (gold, Wumpus, pits)
         self.gold_positions = self.generate_gold_positions(self.random_count)
         self.wumpus_positions = self.generate_wumpus_positions(self.random_count_wumpus, self.gold_positions)
@@ -121,7 +121,6 @@ class WumpusGame:
             adjacent_cells.append((x - 1, y))  # Left
         return adjacent_cells
 
-
     def print_text(self, text, x, y, color=(0, 0, 0), size=24):
         font = pygame.font.Font(None, size)
         text_surface = font.render(text, True, color)
@@ -154,14 +153,22 @@ class WumpusGame:
                 x = random.randint(0, BOARD_WIDTH - 1)
                 y = random.randint(0, BOARD_HEIGHT - 1)
                 if (x, y) not in gold_positions and (x, y) != tuple(self.char_pos) and not self.is_too_close_to_start(x, y):  # Prevents object from being placed on top of each other
-                    pit_positions.append((x, y))
-                    break
+                    if not self.is_too_close_to_pit(x, y, pit_positions):  # Check if the position is too close to another pit
+                        pit_positions.append((x, y))
+                        break
         return pit_positions
 
     def is_too_close_to_start(self, x, y):
         # Check if the specified position is too close to the start position
         start_x, start_y = self.char_pos
         return abs(x - start_x) <= 1 and abs(y - start_y) <= 1
+
+    def is_too_close_to_pit(self, x, y, pit_positions):
+        # Check if the specified position is too close to another pit
+        for pit_x, pit_y in pit_positions:
+            if abs(x - pit_x) <= 1 and abs(y - pit_y) <= 1:
+                return True
+        return False
 
     def draw_board(self):
         self.screen.fill(WHITE)
@@ -182,6 +189,8 @@ class WumpusGame:
                     scaled_breeze_img = pygame.transform.scale(breeze_img, (CELL_SIZE, CELL_SIZE))
                     self.screen.blit(scaled_breeze_img, (adj[0] * CELL_SIZE, adj[1] * CELL_SIZE))
         self.spawn_character()
+
+    # The rest of the methods remain unchanged
 
     def check_pit_nearby(self, x, y):
         adjacent_cells = self.get_adjacent_cells(x, y)

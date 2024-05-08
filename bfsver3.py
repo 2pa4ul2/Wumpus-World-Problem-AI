@@ -105,9 +105,9 @@ class WumpusGame:
         # Initialize game variables
         self.char_pos = [0, 0]  # Default position of the character
         self.board_values = [[0 for _ in range(BOARD_WIDTH)] for _ in range(BOARD_HEIGHT)]  # Initialize the matrix
-        self.random_count = random.randint(4, 5)
-        self.random_count_wumpus = random.randint(3, 4)
-        self.random_count_pit = random.randint(2, 3)
+        self.random_count = random.randint(4, 4)
+        self.random_count_wumpus = random.randint(5, 5)
+        self.random_count_pit = random.randint(2, 2)
         # Generate game elements (gold, Wumpus, pits)
         self.gold_positions = self.generate_gold_positions(self.random_count)
         self.wumpus_positions = self.generate_wumpus_positions(self.random_count_wumpus, self.gold_positions)
@@ -175,11 +175,18 @@ class WumpusGame:
     def generate_gold_positions(self, num_golds):
         gold_positions = []
         for _ in range(num_golds):
-            x = random.randint(0, BOARD_WIDTH - 1)
-            y = random.randint(0, BOARD_HEIGHT - 1)
-            if (x, y) not in gold_positions and (x, y) != tuple(self.char_pos):  # Prevents object from being placed on top of each other
-                gold_positions.append((x, y))
+            while True:
+                x = random.randint(0, BOARD_WIDTH - 1)
+                y = random.randint(0, BOARD_HEIGHT - 1)
+                if (x, y) not in gold_positions and (x, y) != tuple(self.char_pos) and not self.is_corner_position(x, y):  # Prevents object from being placed on top of each other
+                    gold_positions.append((x, y))
+                    break
         return gold_positions
+
+    def is_corner_position(self, x, y):
+        # Check if the specified position is in the corner
+        return (x == 0 and y == 0) or (x == 0 and y == BOARD_HEIGHT - 1) or (x == BOARD_WIDTH - 1 and y == 0) or (x == BOARD_WIDTH - 1 and y == BOARD_HEIGHT - 1)
+
 
     def generate_wumpus_positions(self, wumpus_monster, gold_positions):
         wumpus_positions = []
@@ -198,10 +205,19 @@ class WumpusGame:
             while True:
                 x = random.randint(0, BOARD_WIDTH - 1)
                 y = random.randint(0, BOARD_HEIGHT - 1)
-                if (x, y) not in gold_positions and (x, y) != tuple(self.char_pos) and not self.is_too_close_to_start(x, y):  # Prevents object from being placed on top of each other
+                if (x, y) not in gold_positions and (x, y) != tuple(self.char_pos) and not self.is_too_close_to_start(x, y) and not self.is_too_close_to_pit(x, y, pit_positions):
                     pit_positions.append((x, y))
                     break
         return pit_positions
+
+    def is_too_close_to_pit(self, x, y, pit_positions):
+        # Check if the specified position is too close to any existing pit position
+        for pit_pos in pit_positions:
+            pit_x, pit_y = pit_pos
+            if abs(x - pit_x) <= 1 and abs(y - pit_y) <= 1:
+                return True
+        return False
+
 
     def is_too_close_to_start(self, x, y):
         # Check if the specified position is too close to the start position
@@ -421,7 +437,7 @@ class WumpusGame:
             pygame.display.flip()
 
             # Introduce a delay to control the speed
-            pygame_clock.tick(5)  # Adjust the value to control the speed
+            pygame_clock.tick(20)  # Adjust the value to control the speed
 
         pygame.quit()
         sys.exit()
