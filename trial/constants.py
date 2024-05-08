@@ -37,6 +37,9 @@ wumpus_img = pygame.transform.scale(wumpus_img, (CELL_SIZE, CELL_SIZE))
 pit_img = pygame.image.load("assets/hole.png")
 pit_img = pygame.transform.scale(pit_img, (CELL_SIZE, CELL_SIZE))
 
+cover_img = pygame.image.load("assets/wall_1.png")
+cover_img = pygame.transform.scale(cover_img, (CELL_SIZE, CELL_SIZE))
+
 glitter_img = pygame.image.load("assets/glitter.png")
 stench_img = pygame.image.load("assets/stench.png")
 breeze_img = pygame.image.load("assets/breeze.png")

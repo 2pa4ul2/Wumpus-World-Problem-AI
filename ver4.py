@@ -50,34 +50,17 @@ class Node:
                 if neighbor in visited:
                     continue
                 queue.append(neighbor)
-        return None
 
 class Agent:
     def __init__(self):
-        self.knowledge_base = {}
+        self.kb = {}  # Knowledge base
 
-    def perceive(self, cell):
-        # Perceive the cell and update the knowledge base
-        if cell.breeze:
-            self.knowledge_base[cell] = 'breeze'
-        elif cell.stench:
-            self.knowledge_base[cell] = 'stench'
-        elif cell.glitter:
-            self.knowledge_base[cell] = 'glitter'
-        else:
-            self.knowledge_base[cell] = 'safe'
-
-    def choose_next_cell(self):
-        # Choose the next cell to move to based on the knowledge base
-        for cell in self.knowledge_base:
-            if self.knowledge_base[cell] == 'safe':
-                return cell
-        return None
-
-    def move_to_cell(self, cell):
-        # Move to the chosen cell and perceive it
-        self.current_cell = cell
-        self.perceive(cell)
+    def perceive(self, x, y, surroundings):
+        # Update knowledge base based on perceptions
+        self.kb[(x, y)] = surroundings  # Update the knowledge base with perceived surroundings
+        for adj_x, adj_y, adj in surroundings:
+            if 'Pit' in adj:
+                self.kb[(adj_x, adj_y)] = ['Unsafe']  
 
     def update_kb(self, x, y, value):
         # Update knowledge base with inferred information
@@ -105,13 +88,11 @@ class WumpusGame:
         # Initialize game variables
         self.char_pos = [0, 0]  # Default position of the character
         self.board_values = [[0 for _ in range(BOARD_WIDTH)] for _ in range(BOARD_HEIGHT)]  # Initialize the matrix
-        self.random_count = random.randint(4, 5)
-        self.random_count_wumpus = random.randint(3, 4)
-        self.random_count_pit = random.randint(2, 3)
+        self.random_count = random.randint(3, 4)
         # Generate game elements (gold, Wumpus, pits)
         self.gold_positions = self.generate_gold_positions(self.random_count)
-        self.wumpus_positions = self.generate_wumpus_positions(self.random_count_wumpus, self.gold_positions)
-        self.pit_positions = self.generate_pit_positions(self.random_count_pit, self.gold_positions)
+        self.wumpus_positions = self.generate_wumpus_positions(self.random_count, self.gold_positions)
+        self.pit_positions = self.generate_pit_positions(self.random_count, self.gold_positions, self.wumpus_positions)
         self.score = 0
         self.direction = (0, 1)  # Default direction
         self.safe_positions = set()  # Store safe positions visited by the agent
@@ -135,24 +116,12 @@ class WumpusGame:
                 self.char_pos = [new_x, new_y]
                 self.score -= 100
                 self.safe_positions.add((new_x, new_y))
-                if dx == 1:
-                    self.direction = (1, 0)  # Moving right
-                elif dx == -1:
-                    self.direction = (-1, 0)  # Moving left
-                elif dy == 1:
-                    self.direction = (0, 1)  # Moving down
-                elif dy == -1:
-                    self.direction = (0, -1)  # Moving up
                 if self.char_pos in self.gold_positions:
                     self.gold_positions.remove(tuple(self.char_pos))
                     if not self.gold_positions:
                         print("You collected all the gold! You win!")
                         pygame.quit()
                         sys.exit()
-                if self.char_pos in self.original_pos:
-                    print("You returned to the starting position!")
-                    pygame.quit()
-                    sys.exit()
 
     def get_adjacent_cells(self, x, y):
         adjacent_cells = []
@@ -192,16 +161,24 @@ class WumpusGame:
                     break
         return wumpus_positions
 
-    def generate_pit_positions(self, pit, gold_positions):
+    def generate_pit_positions(self, pit, gold_positions, wumpus_positions):
         pit_positions = []
         for _ in range(pit):
             while True:
                 x = random.randint(0, BOARD_WIDTH - 1)
                 y = random.randint(0, BOARD_HEIGHT - 1)
-                if (x, y) not in gold_positions and (x, y) != tuple(self.char_pos) and not self.is_too_close_to_start(x, y):  # Prevents object from being placed on top of each other
+                if (x, y) not in gold_positions and (x, y) != tuple(self.char_pos) \
+                        and not self.is_too_close_to_start(x, y) \
+                        and not self.is_adjacent_to_pit(x, y, pit_positions):  # Prevents object from being placed on top of each other
                     pit_positions.append((x, y))
                     break
         return pit_positions
+
+    def is_adjacent_to_pit(self, x, y, pit_positions):
+        for px, py in pit_positions:
+            if abs(x - px) <= 1 and abs(y - py) <= 1:
+                return True
+        return False
 
     def is_too_close_to_start(self, x, y):
         # Check if the specified position is too close to the start position
@@ -262,10 +239,6 @@ class WumpusGame:
             
     def print_board(self):
         # Print the matrix representation of the game board
-        for row in self.board_values:
-            print(" ".join(str(cell) for cell in row))
-
-    def print_board(self):
         symbols = {
             0: '.',  # Empty cell
             'P': 'P',  # Pit
@@ -387,8 +360,6 @@ class WumpusGame:
                         if tuple(self.char_pos) == self.original_pos:
                             print("You returned to the starting position!")
                             reached_original_pos = True  # Update the flag
-                            #pygame.quit()
-                            #sys.exit()
 
             # Check for perception
             x, y = self.char_pos
@@ -421,7 +392,7 @@ class WumpusGame:
             pygame.display.flip()
 
             # Introduce a delay to control the speed
-            pygame_clock.tick(5)  # Adjust the value to control the speed
+            pygame_clock.tick(2)  # Adjust the value to control the speed
 
         pygame.quit()
         sys.exit()
