@@ -4,6 +4,8 @@ import random
 from collections import deque
 from constants import *
 from agent import Agent
+import random
+
 
 class Node:
     def __init__(self, x, y, parent=None):
@@ -52,6 +54,71 @@ class Node:
                 queue.append(neighbor)
         return None
 
+class Button:
+    def __init__(self, x, y, image):
+        self.image = image
+        self.rect = self.image.get_rect()
+        self.rect.topleft = (x, y)
+        self.hovered = False
+
+    def draw(self, surface):
+        pos = pygame.mouse.get_pos()
+
+        # Check if mouse is over the button
+        if self.rect.collidepoint(pos):
+            self.hovered = True
+        else:
+            self.hovered = False
+
+        # Scale the image if hovered
+        if self.hovered:
+            scaled_image = pygame.transform.scale(self.image, (int(self.image.get_width() * 1.05), int(self.image.get_height() * 1.05)))
+            surface.blit(scaled_image, self.rect)
+        else:
+            surface.blit(self.image, self.rect)
+
+        # Check if button is clicked
+        if self.rect.collidepoint(pos) and pygame.mouse.get_pressed()[0] == 1:
+            return True
+
+        return False
+
+class StartGame:
+    def __init__(self):
+        pygame.init()
+        self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
+        pygame.display.set_caption("15x8 Board with Pygame")
+        self.background = pygame.image.load("assets/bg.jpeg")
+
+    def draw_bg(self):
+        self.screen.blit(self.background, (WIDTH, HEIGHT))
+
+    def run(self):
+        play_btn = Button(150, 400, play_img)
+        exit_btn = Button(350, 400, exit_img)
+        running = True
+        while running:
+
+            self.screen.blit(start_img, (0, 0))
+
+            self.screen.blit(title_img, (WIDTH//2 - title_img.get_width()//2, -190))
+            
+            if play_btn.draw(self.screen):
+                return True
+            if exit_btn.draw(self.screen):
+                pygame.quit()
+                sys.exit()
+                
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+
+            self.draw_bg()
+            pygame.display.flip()
+
+        pygame.quit()
+        sys.exit()
+
 class WumpusGame:
     def __init__(self):
         pygame.init()
@@ -59,25 +126,33 @@ class WumpusGame:
         pygame.display.set_caption("15x8 Board with Pygame")
         self.agent = Agent()
         # Initialize game variables
-        self.char_pos = [0, 0]  # Default position of the character
+        self.char_pos = [0, 0]  # Set the starting position of the character to (0, 0)
+        self.original_pos = tuple(self.char_pos)  # Store the original position
         self.board_values = [[0 for _ in range(BOARD_WIDTH)] for _ in range(BOARD_HEIGHT)]  # Initialize the matrix
-        self.random_count = random.randint(4, 4)
+        self.random_count = random.randint(2, 3)
         self.random_count_wumpus = random.randint(5, 5)
-        self.random_count_pit = random.randint(2, 2)
+        self.random_count_pit = random.randint(1, 2)
+        self.gold_positions = []
+        self.wumpus_positions = []
+        self.pit_positions = []
+        self.score = 0
+        self.direction = (0, 1)  # Default direction
+        self.safe_positions = set()  # Store safe positions visited by the agent
+        self.update_board_values()  # Update the board values initially
         # Generate game elements (gold, Wumpus, pits)
         self.gold_positions = self.generate_gold_positions(self.random_count)
         self.wumpus_positions = self.generate_wumpus_positions(self.random_count_wumpus, self.gold_positions)
         self.pit_positions = self.generate_pit_positions(self.random_count_pit, self.gold_positions)
-        self.score = 0
-        self.direction = (0, 1)  # Default direction
-        self.safe_positions = set()  # Store safe positions visited by the agent
-        self.original_pos = tuple(self.char_pos)
-        self.update_board_values()  # Update the board values initially
+        self.covered_cells = [[True for _ in range(BOARD_WIDTH)] for _ in range(BOARD_HEIGHT)]
+        # Cover the starting position
+        self.covered_cells[self.char_pos[1]][self.char_pos[0]] = False
 
     def move_character(self, dx, dy):
         new_x = self.char_pos[0] + dx
         new_y = self.char_pos[1] + dy
         if 0 <= new_x < BOARD_WIDTH and 0 <= new_y < BOARD_HEIGHT:
+            # Uncover the cell the player is moving to
+            self.covered_cells[new_y][new_x] = False
             if (new_x, new_y) in self.wumpus_positions:
                 print("You encountered a wumpus! You killed it!")
                 self.wumpus_positions.remove((new_x, new_y))
@@ -88,7 +163,7 @@ class WumpusGame:
                 sys.exit()
             else:
                 self.char_pos = [new_x, new_y]
-                self.score -= 100
+                self.score -= 50
                 self.safe_positions.add((new_x, new_y))
                 if dx == 1:
                     self.direction = (1, 0)  # Moving right
@@ -108,6 +183,7 @@ class WumpusGame:
                     print("You returned to the starting position!")
                     pygame.quit()
                     sys.exit()
+
 
     def get_adjacent_cells(self, x, y):
         adjacent_cells = []
@@ -129,10 +205,13 @@ class WumpusGame:
     def generate_gold_positions(self, num_golds):
         gold_positions = []
         for _ in range(num_golds):
-            x = random.randint(0, BOARD_WIDTH - 1)
-            y = random.randint(0, BOARD_HEIGHT - 1)
-            if (x, y) not in gold_positions and (x, y) != tuple(self.char_pos):  # Prevents object from being placed on top of each other
-                gold_positions.append((x, y))
+            while True:
+                x = random.randint(0, BOARD_WIDTH - 1)
+                y = random.randint(0, BOARD_HEIGHT - 1)
+                if (x, y) not in gold_positions and (x, y) != tuple(self.char_pos) and (x, y) not in self.wumpus_positions and (x, y) not in self.pit_positions:  
+                    # Ensure gold doesn't spawn on the character, Wumpus, or pit
+                    gold_positions.append((x, y))
+                    break
         return gold_positions
 
     def generate_wumpus_positions(self, wumpus_monster, gold_positions):
@@ -141,7 +220,8 @@ class WumpusGame:
             while True:
                 x = random.randint(0, BOARD_WIDTH - 1)
                 y = random.randint(0, BOARD_HEIGHT - 1)
-                if (x, y) not in gold_positions and (x, y) != tuple(self.char_pos):  # Prevents object from being placed on top of each other
+                if (x, y) not in gold_positions and (x, y) != tuple(self.char_pos) and (x, y) not in self.wumpus_positions and (x, y) not in self.pit_positions:  
+                    # Ensure Wumpus doesn't spawn on the character, gold, or pit
                     wumpus_positions.append((x, y))
                     break
         return wumpus_positions
@@ -152,11 +232,52 @@ class WumpusGame:
             while True:
                 x = random.randint(0, BOARD_WIDTH - 1)
                 y = random.randint(0, BOARD_HEIGHT - 1)
-                if (x, y) not in gold_positions and (x, y) != tuple(self.char_pos) and not self.is_too_close_to_start(x, y):  # Prevents object from being placed on top of each other
-                    if not self.is_too_close_to_pit(x, y, pit_positions):  # Check if the position is too close to another pit
-                        pit_positions.append((x, y))
-                        break
+                if (x, y) not in gold_positions and (x, y) != tuple(self.char_pos) and (x, y) not in self.wumpus_positions and (x, y) not in self.pit_positions:
+                    # Ensure pit doesn't spawn on the character, gold, or Wumpus
+                    if not self.is_too_close_to_start(x, y):  
+                        # Ensure the pit isn't too close to the starting position
+                        if not self.is_too_close_to_pit(x, y, pit_positions):  
+                            # Ensure the pit isn't too close to another pit
+                            pit_positions.append((x, y))
+                            break
         return pit_positions
+
+
+    def draw_board(self):
+        for y in range(BOARD_HEIGHT):
+            for x in range(BOARD_WIDTH):
+                # Draw other game elements first
+                # Draw board tiles
+                self.screen.blit(tile_img, (x * CELL_SIZE, y * CELL_SIZE))
+                pygame.draw.rect(self.screen, BLACK, (x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE), 1)
+
+                # Draw Wumpus, pit, gold, breeze, glitter, and stench
+                for pos in self.wumpus_positions:
+                    if (x, y) in self.get_adjacent_cells(*pos):
+                        scaled_stench_img = pygame.transform.scale(stench_img, (CELL_SIZE, CELL_SIZE))
+                        self.screen.blit(scaled_stench_img, (x * CELL_SIZE, y * CELL_SIZE))
+                for pos in self.gold_positions:
+                    if (x, y) in self.get_adjacent_cells(*pos):
+                        scaled_glitter_img = pygame.transform.scale(glitter_img, (CELL_SIZE, CELL_SIZE))
+                        self.screen.blit(scaled_glitter_img, (x * CELL_SIZE, y * CELL_SIZE))
+                for pos in self.pit_positions:
+                    if (x, y) in self.get_adjacent_cells(*pos):
+                        scaled_breeze_img = pygame.transform.scale(breeze_img, (CELL_SIZE, CELL_SIZE))
+                        self.screen.blit(scaled_breeze_img, (x * CELL_SIZE, y * CELL_SIZE))
+
+                for pos in self.gold_positions:
+                    self.spawn_gold(*pos)
+                for pos in self.wumpus_positions:
+                    self.spawn_wumpus(*pos)
+                for pos in self.pit_positions:
+                    self.spawn_pit(*pos)
+
+        # Now, draw the cover image
+        for y in range(BOARD_HEIGHT):
+            for x in range(BOARD_WIDTH):
+                if self.covered_cells[y][x]:
+                    # If the cell is covered, draw the cover image above other game elements
+                    self.screen.blit(cover_img, (x * CELL_SIZE, y * CELL_SIZE))
 
     def is_too_close_to_start(self, x, y):
         # Check if the specified position is too close to the start position
@@ -169,28 +290,6 @@ class WumpusGame:
             if abs(x - pit_x) <= 1 and abs(y - pit_y) <= 1:
                 return True
         return False
-
-    def draw_board(self):
-        self.screen.fill(WHITE)
-        for y in range(BOARD_HEIGHT):
-            for x in range(BOARD_WIDTH):
-                self.screen.blit(tile_img, (x * CELL_SIZE, y * CELL_SIZE))
-                pygame.draw.rect(self.screen, BLACK, (x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE), 1)
-            for pos in self.wumpus_positions:
-                for adj in self.get_adjacent_cells(*pos):
-                    scaled_stench_img = pygame.transform.scale(stench_img, (CELL_SIZE, CELL_SIZE))
-                    self.screen.blit(scaled_stench_img, (adj[0] * CELL_SIZE, adj[1] * CELL_SIZE))
-            for pos in self.gold_positions:
-                for adj in self.get_adjacent_cells(*pos):
-                    scaled_glitter_img = pygame.transform.scale(glitter_img, (CELL_SIZE, CELL_SIZE))
-                    self.screen.blit(scaled_glitter_img, (adj[0] * CELL_SIZE, adj[1] * CELL_SIZE))
-            for pos in self.pit_positions:
-                for adj in self.get_adjacent_cells(*pos):
-                    scaled_breeze_img = pygame.transform.scale(breeze_img, (CELL_SIZE, CELL_SIZE))
-                    self.screen.blit(scaled_breeze_img, (adj[0] * CELL_SIZE, adj[1] * CELL_SIZE))
-        self.spawn_character()
-
-    # The rest of the methods remain unchanged
 
     def check_pit_nearby(self, x, y):
         adjacent_cells = self.get_adjacent_cells(x, y)
@@ -224,27 +323,6 @@ class WumpusGame:
             x, y = pos
             self.board_values[y][x] = "P"  # Represent 
             
-    def print_board(self):
-        # Print the matrix representation of the game board
-        for row in self.board_values:
-            print(" ".join(str(cell) for cell in row))
-
-    def print_board(self):
-        symbols = {
-            0: '.',  # Empty cell
-            'P': 'P',  # Pit
-            'G': 'G',  # Gold
-            'W': 'W',  # Wumpus
-            'C': 'C'   # Character
-        }
-        for y in range(BOARD_HEIGHT):
-            for x in range(BOARD_WIDTH):
-                if (x, y) == tuple(self.char_pos):
-                    print(symbols['C'], end=' ')
-                else:
-                    print(symbols[self.board_values[y][x]], end=' ')
-            print()
-
     def spawn_gold(self, x, y):
         self.screen.blit(gold_img, (x * CELL_SIZE, y * CELL_SIZE))
 
@@ -298,7 +376,59 @@ class WumpusGame:
                 if event.type == pygame.QUIT:
                     running = False
 
-            self.handle_ai_movement(all_gold_collected, reached_original_pos, return_path)
+            if self.gold_positions:  # Check if there is remaining gold
+                start_node = Node(*self.char_pos)
+                gold_nodes = [Node(*pos) for pos in self.gold_positions]
+                shortest_path = None
+                for goal_node in gold_nodes:
+                    path = start_node.bfs(self.board_values, start_node, goal_node)  # Using BFS instead of A*
+                    if path and (not shortest_path or len(path) < len(shortest_path)):
+                        shortest_path = path
+
+                if shortest_path and len(shortest_path) > 1:
+                    next_pos = shortest_path[1]  # Skip the current position
+                    dx = next_pos[0] - self.char_pos[0]
+                    dy = next_pos[1] - self.char_pos[1]
+                    self.move_character(dx, dy)
+                    if tuple(self.char_pos) in self.gold_positions:
+                        self.gold_positions.remove(tuple(self.char_pos))
+                        self.score += 1000
+                elif shortest_path:
+                    print("Reached dead end. Backtracking...")
+                    prev_pos = shortest_path[-2]  # Get the second last position
+                    dx = prev_pos[0] - self.char_pos[0]
+                    dy = prev_pos[1] - self.char_pos[1]
+                    self.move_character(dx, dy)
+                else:
+                    # Check if the character is at the original position
+                    if all_gold_collected and not reached_original_pos:
+                        if not return_path:
+                            # If return path is not calculated yet, calculate it
+                            return_path = start_node.bfs(self.board_values, start_node, Node(*self.original_pos))
+                        if return_path:
+                            # If there is a return path, move towards the next cell in the path
+                            next_pos = return_path.pop(0)
+                            dx = next_pos[0] - self.char_pos[0]
+                            dy = next_pos[1] - self.char_pos[1]
+                            self.move_character(dx, dy)
+                            if tuple(self.char_pos) == self.original_pos:
+                                print("You returned to the starting position!")
+                                reached_original_pos = True  # Update the flag
+            else:
+                # All gold collected, return to the starting position
+                if not reached_original_pos:
+                    if not return_path:
+                        # If return path is not calculated yet, calculate it
+                        return_path = start_node.bfs(self.board_values, start_node, Node(*self.original_pos))
+                    if return_path:
+                        # If there is a return path, move towards the next cell in the path
+                        next_pos = return_path.pop(0)
+                        dx = next_pos[0] - self.char_pos[0]
+                        dy = next_pos[1] - self.char_pos[1]
+                        self.move_character(dx, dy)
+                        if tuple(self.char_pos) == self.original_pos:
+                            print("You returned to the starting position!")
+                            reached_original_pos = True  # Update the flag
 
             # Check for perception
             x, y = self.char_pos
@@ -319,75 +449,12 @@ class WumpusGame:
 
             # Update the display
             self.draw_board()
-            self.print_board()
-            for pos in self.gold_positions:
-                self.spawn_gold(*pos)
-            for pos in self.wumpus_positions:
-                self.spawn_wumpus(*pos)
-            for pos in self.pit_positions:
-                self.spawn_pit(*pos)
             self.spawn_character()
             self.print_score()
             pygame.display.flip()
 
             # Introduce a delay to control the speed
-            pygame_clock.tick(5)  # Adjust the value to control the speed
+            pygame_clock.tick(1)  # Adjust the value to control the speed
 
         pygame.quit()
         sys.exit()
-
-    def handle_ai_movement(self, all_gold_collected, reached_original_pos, return_path):
-        if self.gold_positions:  # Check if there is remaining gold
-            start_node = Node(*self.char_pos)
-            gold_nodes = [Node(*pos) for pos in self.gold_positions]
-            shortest_path = None
-            for goal_node in gold_nodes:
-                path = start_node.bfs(self.board_values, start_node, goal_node)  # Using BFS instead of A*
-                if path and (not shortest_path or len(path) < len(shortest_path)):
-                    shortest_path = path
-
-            if shortest_path and len(shortest_path) > 1:
-                next_pos = shortest_path[1]  # Skip the current position
-                dx = next_pos[0] - self.char_pos[0]
-                dy = next_pos[1] - self.char_pos[1]
-                self.move_character(dx, dy)
-                if tuple(self.char_pos) in self.gold_positions:
-                    self.gold_positions.remove(tuple(self.char_pos))
-                    self.score += 1000
-            elif shortest_path:
-                print("Reached dead end. Backtracking...")
-                prev_pos = shortest_path[-2]  # Get the second last position
-                dx = prev_pos[0] - self.char_pos[0]
-                dy = prev_pos[1] - self.char_pos[1]
-                self.move_character(dx, dy)
-            else:
-                # Check if the character is at the original position
-                if all_gold_collected and not reached_original_pos:
-                    if not return_path:
-                        # If return path is not calculated yet, calculate it
-                        return_path = start_node.bfs(self.board_values, start_node, Node(*self.original_pos))
-                    if return_path:
-                        # If there is a return path, move towards the next cell in the path
-                        next_pos = return_path.pop(0)
-                        dx = next_pos[0] - self.char_pos[0]
-                        dy = next_pos[1] - self.char_pos[1]
-                        self.move_character(dx, dy)
-                        if tuple(self.char_pos) == self.original_pos:
-                            print("You returned to the starting position!")
-                            reached_original_pos = True  # Update the flag
-        else:
-            # All gold collected, return to the starting position
-            if not reached_original_pos:
-                if not return_path:
-                    # If return path is not calculated yet, calculate it
-                    start_node = Node(*self.char_pos)
-                    return_path = start_node.bfs(self.board_values, start_node, Node(*self.original_pos))
-                if return_path:
-                    # If there is a return path, move towards the next cell in the path
-                    next_pos = return_path.pop(0)
-                    dx = next_pos[0] - self.char_pos[0]
-                    dy = next_pos[1] - self.char_pos[1]
-                    self.move_character(dx, dy)
-                    if tuple(self.char_pos) == self.original_pos:
-                        print("You returned to the starting position!")
-                        reached_original_pos = True  # Update the flag

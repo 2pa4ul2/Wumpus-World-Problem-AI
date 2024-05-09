@@ -7,8 +7,8 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 GRAY = (200, 200, 200)
 
-WIDTH, HEIGHT = 960, 640
-CELL_SIZE = 80
+WIDTH, HEIGHT = 700, 700
+CELL_SIZE = 140
 BOARD_WIDTH, BOARD_HEIGHT = 5, 5
 
 tile_img = pygame.image.load("assets/tile3.jpg")
@@ -43,3 +43,13 @@ cover_img = pygame.transform.scale(cover_img, (CELL_SIZE, CELL_SIZE))
 glitter_img = pygame.image.load("assets/glitter.png")
 stench_img = pygame.image.load("assets/stench.png")
 breeze_img = pygame.image.load("assets/breeze.png")
+
+
+start_img = pygame.image.load("assets/bg.jpeg")
+start_img = pygame.transform.scale(start_img, (WIDTH, HEIGHT))
+
+title_img = pygame.image.load("assets/title.png")
+play_img = pygame.image.load("assets/start.png")
+play_img = pygame.transform.scale(play_img, (WIDTH//4, HEIGHT//5.5))
+exit_img = pygame.image.load("assets/exit.png")
+exit_img = pygame.transform.scale(exit_img, (WIDTH//4, HEIGHT//5.5))

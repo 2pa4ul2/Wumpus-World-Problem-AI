@@ -218,7 +218,6 @@ class WumpusGame:
                 return True
         return False
 
-
     def is_too_close_to_start(self, x, y):
         # Check if the specified position is too close to the start position
         start_x, start_y = self.char_pos
