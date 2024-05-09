@@ -2,8 +2,8 @@ import pygame
 import sys
 import random
 from collections import deque
-from constants import *
-from agent import Agent
+from states.constants import *
+from states.agent import Agent
 import random
 
 
@@ -129,9 +129,9 @@ class WumpusGame:
         self.char_pos = [0, 0]  # Set the starting position of the character to (0, 0)
         self.original_pos = tuple(self.char_pos)  # Store the original position
         self.board_values = [[0 for _ in range(BOARD_WIDTH)] for _ in range(BOARD_HEIGHT)]  # Initialize the matrix
-        self.random_count = random.randint(2, 3)
+        self.random_count = random.randint(3, 3)
         self.random_count_wumpus = random.randint(5, 5)
-        self.random_count_pit = random.randint(1, 2)
+        self.random_count_pit = random.randint(1, 1)
         self.gold_positions = []
         self.wumpus_positions = []
         self.pit_positions = []
@@ -156,7 +156,7 @@ class WumpusGame:
             if (new_x, new_y) in self.wumpus_positions:
                 print("You encountered a wumpus! You killed it!")
                 self.wumpus_positions.remove((new_x, new_y))
-                self.score -= 100  # Deduct points for killing the Wumpus
+                self.score += 1000
             elif (new_x, new_y) in self.pit_positions:
                 print("You fell into a pit! Game Over!")
                 pygame.quit()
@@ -176,11 +176,11 @@ class WumpusGame:
                 if self.char_pos in self.gold_positions:
                     self.gold_positions.remove(tuple(self.char_pos))
                     if not self.gold_positions:
-                        print("You collected all the gold! You win!")
                         pygame.quit()
                         sys.exit()
                 if self.char_pos in self.original_pos:
                     print("You returned to the starting position!")
+                    print("You win!")
                     pygame.quit()
                     sys.exit()
 
@@ -246,7 +246,6 @@ class WumpusGame:
     def draw_board(self):
         for y in range(BOARD_HEIGHT):
             for x in range(BOARD_WIDTH):
-                # Draw other game elements first
                 # Draw board tiles
                 self.screen.blit(tile_img, (x * CELL_SIZE, y * CELL_SIZE))
                 pygame.draw.rect(self.screen, BLACK, (x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE), 1)
@@ -278,6 +277,10 @@ class WumpusGame:
                 if self.covered_cells[y][x]:
                     # If the cell is covered, draw the cover image above other game elements
                     self.screen.blit(cover_img, (x * CELL_SIZE, y * CELL_SIZE))
+                if tuple(self.char_pos) == self.original_pos:
+                    for y in range(BOARD_HEIGHT):
+                        for x in range(BOARD_WIDTH):
+                            self.covered_cells[y][x] = False
 
     def is_too_close_to_start(self, x, y):
         # Check if the specified position is too close to the start position
@@ -454,7 +457,7 @@ class WumpusGame:
             pygame.display.flip()
 
             # Introduce a delay to control the speed
-            pygame_clock.tick(1)  # Adjust the value to control the speed
+            pygame_clock.tick(2)  # Adjust the value to control the speed
 
         pygame.quit()
         sys.exit()

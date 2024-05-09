@@ -6,6 +6,7 @@ import pygame
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 GRAY = (200, 200, 200)
+RED = (255, 0, 0)
 
 WIDTH, HEIGHT = 700, 700
 CELL_SIZE = 140
@@ -51,5 +52,12 @@ start_img = pygame.transform.scale(start_img, (WIDTH, HEIGHT))
 title_img = pygame.image.load("assets/title.png")
 play_img = pygame.image.load("assets/start.png")
 play_img = pygame.transform.scale(play_img, (WIDTH//4, HEIGHT//5.5))
+
 exit_img = pygame.image.load("assets/exit.png")
 exit_img = pygame.transform.scale(exit_img, (WIDTH//4, HEIGHT//5.5))
+
+quit_img = pygame.image.load("assets/exit2.png")
+quit_img = pygame.transform.scale(quit_img, (WIDTH//4, HEIGHT//5.5))
+
+again_img = pygame.image.load("assets/again.png")
+again_img = pygame.transform.scale(again_img, (WIDTH//4, HEIGHT//5.5))

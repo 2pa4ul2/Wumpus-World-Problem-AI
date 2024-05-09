@@ -1,4 +1,4 @@
-from wumpus import WumpusGame, StartGame
+from states.wumpus import WumpusGame, StartGame
 
 if __name__ == "__main__":
 
